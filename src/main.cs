@@ -1,12 +1,22 @@
 class Program
 {
+    enum Types
+    {
+        None = 0,
+        echo = 1, 
+        exit = 2,
+        type = 3    
+    }
+
     static void Main()
     {
         while (true)
         {
-            Console.Write("$ ");
-            
-            string command = Console.ReadLine() ?? "";
+            string command = GetCommandFromUser();
+
+            Types commandtype = GetCommandType(command);
+
+            Console.Write(commandtype);
 
             List<string> commandList = command.Split(" ").ToList();
 
@@ -27,5 +37,21 @@ class Program
                     break;
             }
         }
+    }
+
+    static string GetCommandFromUser()
+    {
+        Console.Write("$ ");
+            
+        return Console.ReadLine() ?? "";
+    }
+
+    static Types GetCommandType(string command)
+    {
+        List<string> commandList = command.Split(" ").ToList();
+
+        string baseCommand = commandList?.First() ?? "None";
+            
+        return Enum.TryParse(Types, baseCommand);
     }
 }
