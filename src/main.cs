@@ -55,9 +55,50 @@ class Program
         Command typeCommand = GetCommandType(input.Parameters);
 
         if (typeCommand == Command.None)
-            Console.WriteLine($"{input.Parameters}: not found");
+        {
+            string? executablePath = FindExecutablePath(input.Parameters);
+
+            if (executablePath != null)
+                Console.WriteLine($"{input.Parameters} is {executablePath}");
+            else
+                Console.WriteLine($"{input.Parameters}: not found");
+        }
         else 
             Console.WriteLine($"{input.Parameters} is a shell builtin");
+    }
+
+    static string? FindExecutablePath(string fileName)
+    {
+        string paths = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        char separator = Path.PathSeparator;
+
+        foreach (string p in paths.Split(separator))
+        {
+            if (!Directory.Exists(p))
+                continue;
+
+            string[] files = Directory.GetFiles(p);
+
+            foreach (string file in files)
+            {
+                if (!File.Exists(file))
+                    continue;
+                
+                UnixFileMode mode = File.GetUnixFileMode(file);
+
+                bool isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || 
+                    mode.HasFlag(UnixFileMode.GroupExecute) || 
+                    mode.HasFlag(UnixFileMode.OtherExecute);
+
+                if (isExecutable && Path.GetFileName(file) == fileName)
+                {
+                    return file;
+                }
+                
+            }
+        }
+
+        return null;
     }
 
     class ShellInput
