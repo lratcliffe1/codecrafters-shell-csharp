@@ -1,57 +1,79 @@
 class Program
 {
-    enum Types
-    {
-        None = 0,
-        echo = 1, 
-        exit = 2,
-        type = 3    
-    }
-
     static void Main()
     {
         while (true)
         {
-            string command = GetCommandFromUser();
+            ShellInput shellInput = GetCommandFromUser();
 
-            Types commandtype = GetCommandType(command);
+            if (shellInput.Input == "")
+                continue;
 
-            Console.Write(commandtype);
-
-            List<string> commandList = command.Split(" ").ToList();
-
-            string baseCommand = commandList?.First() ?? "";
-            List<string> restOfCommand = commandList[1..]?.ToList() ?? [];
-
-            switch (baseCommand)
+            switch (shellInput.Command)
             {
-                case "exit":
+                case Command.Exit:
                     return;
-                case "echo":
-                    Console.WriteLine(string.Join(" ", restOfCommand));
+                case Command.Echo:
+                    Console.WriteLine(string.Join(" ", shellInput.Parameters));
                     break;
-                case "":
+                case Command.Type:
+                    PrintType(shellInput);
                     break;
                 default:
-                    Console.WriteLine($"{command}: command not found");
+                    Console.WriteLine($"{shellInput.Input}: command not found");
                     break;
             }
         }
     }
 
-    static string GetCommandFromUser()
+    static ShellInput GetCommandFromUser()
     {
         Console.Write("$ ");
             
-        return Console.ReadLine() ?? "";
+        string input = Console.ReadLine() ?? "";
+
+        string[] parts = input.Split(" ", 2);
+
+        return new ShellInput { 
+            Input = input, 
+            Command = GetCommandType(parts[0]), 
+            Parameters = parts.Length > 1 ? parts[1] : string.Empty,
+        };
     }
 
-    static Types GetCommandType(string command)
+    static Command GetCommandType(string command)
     {
         List<string> commandList = command.Split(" ").ToList();
 
-        string baseCommand = commandList?.First() ?? "None";
+        string baseCommand = commandList?.First() ?? "";
             
-        return Enum.TryParse(Types, baseCommand);
+        return Enum.TryParse(baseCommand, true, out Command type) ? type : Command.None;
+    }
+
+    static void PrintType(ShellInput input)
+    {
+        Command typeCommand = GetCommandType(input.Parameters);
+
+        if (typeCommand == Command.None)
+            Console.WriteLine($"{input.Parameters}: not found");
+        else 
+            Console.WriteLine($"{input.Parameters} is a shell builtin");
+    }
+
+    class ShellInput
+    {
+        public required string Input { get; set; }
+
+        public required Command Command { get; set; }
+
+        public required string Parameters { get; set; }
+    }
+
+    enum Command
+    {
+        None = 0,
+        Echo = 1, 
+        Exit = 2,
+        Type = 3,  
     }
 }
