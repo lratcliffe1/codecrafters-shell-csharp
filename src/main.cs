@@ -8,14 +8,23 @@ class Program
             
             string command = Console.ReadLine() ?? "";
 
-            if (command == "exit")
-            {
-                break;
-            }
+            List<string> commandList = command.Split(" ").ToList();
 
-            if (command != "")
+            string baseCommand = commandList?.First() ?? "";
+            List<string> restOfCommand = commandList[1..]?.ToList() ?? [];
+
+            switch (baseCommand)
             {
-                Console.WriteLine($"{command}: command not found");
+                case "exit":
+                    return;
+                case "echo":
+                    Console.WriteLine(string.Join(" ", restOfCommand));
+                    break;
+                case "":
+                    break;
+                default:
+                    Console.WriteLine($"{command}: command not found");
+                    break;
             }
         }
     }
