@@ -11,16 +11,16 @@ class Program
 
             switch (shellInput.Command)
             {
-                case Command.Exit:
+                case "exit":
                     return;
-                case Command.Echo:
+                case "echo":
                     Console.WriteLine(string.Join(" ", shellInput.Parameters));
                     break;
-                case Command.Type:
+                case "type":
                     PrintType(shellInput);
                     break;
                 default:
-                    Console.WriteLine($"{shellInput.Input}: command not found");
+                    RunExternalProgram(shellInput);
                     break;
             }
         }
@@ -35,36 +35,39 @@ class Program
         string[] parts = input.Split(" ", 2);
 
         return new ShellInput { 
-            Input = input, 
-            Command = GetCommandType(parts[0]), 
+            Input = input.ToLower(), 
+            Command = parts[0].ToLower(), 
             Parameters = parts.Length > 1 ? parts[1] : string.Empty,
         };
     }
 
-    static Command GetCommandType(string command)
-    {
-        List<string> commandList = command.Split(" ").ToList();
-
-        string baseCommand = commandList?.First() ?? "";
-            
-        return Enum.TryParse(baseCommand, true, out Command type) ? type : Command.None;
-    }
-
     static void PrintType(ShellInput input)
     {
-        Command typeCommand = GetCommandType(input.Parameters);
-
-        if (typeCommand == Command.None)
+        if (input.Parameters == "exit" || input.Parameters == "echo" || input.Parameters == "type")
         {
-            string? executablePath = FindExecutablePath(input.Parameters);
-
-            if (executablePath != null)
-                Console.WriteLine($"{input.Parameters} is {executablePath}");
-            else
-                Console.WriteLine($"{input.Parameters}: not found");
-        }
-        else 
             Console.WriteLine($"{input.Parameters} is a shell builtin");
+            return;
+        }
+        
+        string? executablePath = FindExecutablePath(input.Parameters);
+
+        if (executablePath != null)
+            Console.WriteLine($"{input.Parameters} is {executablePath}");
+        else
+            Console.WriteLine($"{input.Parameters}: not found");
+    }
+
+    static void RunExternalProgram(ShellInput input)
+    {
+        string? executablePath = FindExecutablePath(input.Command);
+
+        if (executablePath != null)
+        {
+            Process process = Process.Start(input.Command, input.Parameters);
+            process.WaitForExit();
+        }
+        else
+            Console.WriteLine($"{input.Input}: command not found");
     }
 
     static string? FindExecutablePath(string fileName)
@@ -72,29 +75,32 @@ class Program
         string paths = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         char separator = Path.PathSeparator;
 
-        foreach (string p in paths.Split(separator))
+        foreach (string path in paths.Split(separator))
         {
-            if (!Directory.Exists(p))
+            if (!Directory.Exists(path))
                 continue;
 
-            string[] files = Directory.GetFiles(p);
+            string[] files = Directory.GetFiles(path);
 
             foreach (string file in files)
             {
-                if (!File.Exists(file))
-                    continue;
-                
-                UnixFileMode mode = File.GetUnixFileMode(file);
-
-                bool isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || 
-                    mode.HasFlag(UnixFileMode.GroupExecute) || 
-                    mode.HasFlag(UnixFileMode.OtherExecute);
-
-                if (isExecutable && Path.GetFileName(file) == fileName)
+                try
                 {
-                    return file;
-                }
+                    if (!File.Exists(file))
+                        continue;
                 
+                    UnixFileMode mode = File.GetUnixFileMode(file);
+
+                    bool isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || 
+                        mode.HasFlag(UnixFileMode.GroupExecute) || 
+                        mode.HasFlag(UnixFileMode.OtherExecute);
+
+                    if (isExecutable && Path.GetFileName(file) == fileName)
+                    {
+                        return file;
+                    }
+                }
+                catch {}
             }
         }
 
@@ -105,16 +111,8 @@ class Program
     {
         public required string Input { get; set; }
 
-        public required Command Command { get; set; }
+        public required string Command { get; set; }
 
         public required string Parameters { get; set; }
-    }
-
-    enum Command
-    {
-        None = 0,
-        Echo = 1, 
-        Exit = 2,
-        Type = 3,  
     }
 }
