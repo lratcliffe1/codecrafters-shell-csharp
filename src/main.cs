@@ -3,10 +3,12 @@ using classes;
 
 class Program
 {
-    static List<string> builtInCommands = ["exit", "echo", "type", "pwd"];
+    static List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
 
     static void Main()
-    {
+    {        
+        string workingDirectory = Directory.GetCurrentDirectory();
+
         while (true)
         {
             ShellInput shellInput = GetCommandFromUser();
@@ -19,10 +21,13 @@ class Program
                 case "exit":
                     return;
                 case "echo":
-                    Console.WriteLine(string.Join(" ", shellInput.Parameters));
+                    Console.WriteLine(shellInput.Parameters);
                     break;
                 case "pwd":
-                    PWD(shellInput);
+                    PrintWorkingDirectory(workingDirectory);
+                    break;
+                case "cd":
+                    ChangeDirectory(shellInput, ref workingDirectory);
                     break;
                 case "type":
                     PrintType(shellInput);
@@ -49,10 +54,19 @@ class Program
         };
     }
 
-    static void PWD(ShellInput input)
+    static void PrintWorkingDirectory(string workingDirectory)
     {
-        string workingDirectory = Directory.GetCurrentDirectory();
         Console.WriteLine(workingDirectory);
+    }
+
+    static void ChangeDirectory(ShellInput input, ref string workingDirectory)
+    {
+        if (!Directory.Exists(input.Parameters))
+        {
+            Console.WriteLine($"cd: {input.Parameters}: No such file or directory");
+            return;
+        }
+        workingDirectory = input.Parameters;
     }
 
     static void PrintType(ShellInput input)
