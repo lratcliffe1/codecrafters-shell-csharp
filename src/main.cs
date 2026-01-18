@@ -1,7 +1,10 @@
 using System.Diagnostics;
+using classes;
 
 class Program
 {
+    static List<string> builtInCommands = ["exit", "echo", "type", "pwd"];
+
     static void Main()
     {
         while (true)
@@ -17,6 +20,9 @@ class Program
                     return;
                 case "echo":
                     Console.WriteLine(string.Join(" ", shellInput.Parameters));
+                    break;
+                case "pwd":
+                    PWD(shellInput);
                     break;
                 case "type":
                     PrintType(shellInput);
@@ -43,9 +49,15 @@ class Program
         };
     }
 
+    static void PWD(ShellInput input)
+    {
+        string workingDirectory = Directory.GetCurrentDirectory();
+        Console.WriteLine(workingDirectory);
+    }
+
     static void PrintType(ShellInput input)
     {
-        if (input.Parameters == "exit" || input.Parameters == "echo" || input.Parameters == "type")
+        if (builtInCommands.Contains(input.Parameters))
         {
             Console.WriteLine($"{input.Parameters} is a shell builtin");
             return;
@@ -107,14 +119,5 @@ class Program
         }
 
         return null;
-    }
-
-    class ShellInput
-    {
-        public required string Input { get; set; }
-
-        public required string Command { get; set; }
-
-        public required string Parameters { get; set; }
     }
 }
