@@ -59,16 +59,21 @@ class Program
         List<string> output = [];
         string currentInput = "";
         bool insideSingleQuote = false;
+        bool insideDoubleQuote = false;
                 
         foreach (char c in input)
         {
-            if (c == '\'')
+            if (c == '\"')
+            {
+                insideDoubleQuote = !insideDoubleQuote;
+            }
+            else if (c == '\'' && !insideDoubleQuote)
             {
                 insideSingleQuote = !insideSingleQuote;
             }
             else if (c == ' ')
             {
-                if (insideSingleQuote)
+                if (insideSingleQuote || insideDoubleQuote)
                 {
                     currentInput += c;
                 }
