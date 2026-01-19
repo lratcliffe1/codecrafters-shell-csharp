@@ -3,7 +3,7 @@ using classes;
 
 class Program
 {
-    static List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
+    static readonly List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
 
     static void Main()
     {        
@@ -21,7 +21,7 @@ class Program
                 case "exit":
                     return;
                 case "echo":
-                    Console.WriteLine(shellInput.Parameters);
+                    Console.WriteLine(String.Join(" ", shellInput.Parameters));
                     break;
                 case "pwd":
                     PrintWorkingDirectory(workingDirectory);
@@ -45,13 +45,47 @@ class Program
             
         string input = Console.ReadLine() ?? "";
 
-        string[] parts = input.Split(" ", 2);
+        List<string> formattedInput = FormatInputString(input);
 
         return new ShellInput { 
             Input = input.ToLower(), 
-            Command = parts[0].ToLower(), 
-            Parameters = parts.Length > 1 ? parts[1] : string.Empty,
+            Command = formattedInput[0].ToLower(), 
+            Parameters = formattedInput[1..],
         };
+    }
+
+    static List<string> FormatInputString(string input)
+    {
+        List<string> output = [];
+        string currentInput = "";
+        bool insideSingleQuote = false;
+                
+        foreach (char c in input)
+        {
+            if (c == '\'')
+            {
+                insideSingleQuote = !insideSingleQuote;
+            }
+            else if (c == ' ')
+            {
+                if (insideSingleQuote)
+                {
+                    currentInput += c;
+                }
+                else if (currentInput != "")
+                {
+                    output.Add(currentInput);
+                    currentInput = "";
+                }
+            }
+            else
+            {
+                currentInput += c;
+            }
+        }
+        output.Add(currentInput);
+
+        return output;
     }
 
     static void PrintWorkingDirectory(string workingDirectory)
@@ -63,7 +97,7 @@ class Program
     {
         string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
 
-        string[] parts = input.Parameters.Split("/");
+        string[] parts = input.Parameters[0].Split("/");
 
         if (parts.Length > 1 && parts[^1] == "")
         {
@@ -104,18 +138,18 @@ class Program
 
     static void PrintType(ShellInput input)
     {
-        if (builtInCommands.Contains(input.Parameters))
+        if (builtInCommands.Contains(input.Parameters[0]))
         {
-            Console.WriteLine($"{input.Parameters} is a shell builtin");
+            Console.WriteLine($"{input.Parameters[0]} is a shell builtin");
             return;
         }
         
-        string? executablePath = FindExecutablePath(input.Parameters);
+        string? executablePath = FindExecutablePath(input.Parameters[0]);
 
         if (executablePath != null)
-            Console.WriteLine($"{input.Parameters} is {executablePath}");
+            Console.WriteLine($"{input.Parameters[0]} is {executablePath}");
         else
-            Console.WriteLine($"{input.Parameters}: not found");
+            Console.WriteLine($"{input.Parameters[0]}: not found");
     }
 
     static void RunExternalProgram(ShellInput input)

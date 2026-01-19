@@ -6,5 +6,5 @@ public class ShellInput
 
     public required string Command { get; set; }
 
-    public required string Parameters { get; set; }
+    public required List<string> Parameters { get; set; }
 }
