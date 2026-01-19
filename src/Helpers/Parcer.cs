@@ -41,7 +41,6 @@ public static class Parcer
       }
     }
 
-    // If input ends right after a backslash outside quotes, treat it literally.
     if (ctx.EscapeNextCharacter)
     {
       current.Append('\\');
@@ -56,7 +55,6 @@ public static class Parcer
 
   private static void ParseWithinSingleQuotes(ParcingContext ctx, System.Text.StringBuilder current, char c)
   {
-    // No escaping in single quotes (per your comment)
     if (c == '\'')
     {
       ctx.WithinSingleQuotes = false;
@@ -72,11 +70,9 @@ public static class Parcer
     {
       ctx.EscapeNextCharacter = false;
 
-      // Backslash-newline inside double quotes = line continuation: remove both.
       if (c == '\n')
         return;
 
-      // Only these are actually escaped; everything else keeps the backslash.
       if (BackslashInDoubleQuotesEscapes.Contains(c))
       {
         current.Append(c);
@@ -105,11 +101,7 @@ public static class Parcer
     current.Append(c);
   }
 
-  private static void ParseOutsideOfQuotes(
-    ParcingContext ctx,
-    List<string> output,
-    System.Text.StringBuilder current,
-    char c)
+  private static void ParseOutsideOfQuotes(ParcingContext ctx, List<string> output, System.Text.StringBuilder current, char c)
   {
     if (ctx.EscapeNextCharacter)
     {
