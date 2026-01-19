@@ -61,6 +61,8 @@ class Program
 
     static void ChangeDirectory(ShellInput input, ref string workingDirectory)
     {
+        string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+
         string[] parts = input.Parameters.Split("/");
 
         if (parts.Length > 1 && parts[^1] == "")
@@ -74,6 +76,9 @@ class Program
         {
             switch (part)
             {
+                case "~":
+                    targetWorkingDirectory = home;
+                    break;
                 case "":
                     targetWorkingDirectory = "";
                     break;
