@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using classes;
+using src.Classes;
+using src.Helpers;
 
 class Program
 {
@@ -45,7 +46,7 @@ class Program
             
         string input = Console.ReadLine() ?? "";
 
-        List<string> formattedInput = FormatInputString(input);
+        List<string> formattedInput = Parcer.ParceUserInput(input);
 
         return new ShellInput { 
             Input = input.ToLower(), 
@@ -53,70 +54,7 @@ class Program
             Parameters = formattedInput[1..],
         };
     }
-
-/// <summary>
-/// Single quotes disable all special meaning for characters enclosed within them.
-/// Double quotes disable all special meaning for characters except $ and \
-/// Backslash outside of quotes disables the next special characters meaning
-/// Backslach inside single quotes have not effect
-/// </summary>
-/// <param name="input"></param>
-/// <returns></returns>
-       
-
-    static List<string> FormatInputString(string input)
-    {
-        List<string> output = [];
-        string currentInput = "";
-        bool insideSingleQuote = false;
-        bool insideDoubleQuote = false;
-        bool escapeNextCharacter = false;
-                
-        foreach (char c in input)
-        {
-            if (c == '\"' && !insideSingleQuote  && !escapeNextCharacter)
-            {
-                insideDoubleQuote = !insideDoubleQuote;
-            }
-            else if (c == '\'' && !insideDoubleQuote && !escapeNextCharacter)
-            {
-                insideSingleQuote = !insideSingleQuote;
-            }
-            else if (insideDoubleQuote || insideSingleQuote)
-            {
-                currentInput += c;
-            }
-            else if (c == '\\' && !insideSingleQuote)
-            {
-                escapeNextCharacter = true;
-            }
-            else if (escapeNextCharacter == true)
-            {
-                currentInput += c;
-                escapeNextCharacter = false;
-            }
-            else  if (c == ' ')
-            {
-                if (insideSingleQuote || insideDoubleQuote)
-                {
-                    currentInput += c;
-                }
-                else if (currentInput != "")
-                {
-                    output.Add(currentInput);
-                    currentInput = "";
-                }
-            }
-            else
-            {
-                currentInput += c;
-            }
-        }
-        output.Add(currentInput);
-
-        return output;
-    }
-
+    
     static void PrintWorkingDirectory(string workingDirectory)
     {
         Console.WriteLine(workingDirectory);

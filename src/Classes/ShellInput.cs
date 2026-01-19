@@ -1,4 +1,4 @@
-namespace classes;
+namespace src.Classes;
 
 public class ShellInput
 {
