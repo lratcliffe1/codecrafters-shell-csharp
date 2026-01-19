@@ -61,12 +61,40 @@ class Program
 
     static void ChangeDirectory(ShellInput input, ref string workingDirectory)
     {
-        if (!Directory.Exists(input.Parameters))
+        string[] parts = input.Parameters.Split("/");
+
+        if (parts.Length > 1 && parts[^1] == "")
         {
-            Console.WriteLine($"cd: {input.Parameters}: No such file or directory");
+            parts = parts[0..^1];
+        }
+
+        string targetWorkingDirectory = workingDirectory;
+
+        foreach (string part in parts)
+        {
+            switch (part)
+            {
+                case "":
+                    targetWorkingDirectory = "";
+                    break;
+                case ".":
+                    targetWorkingDirectory = workingDirectory;
+                    break;
+                case "..":
+                    targetWorkingDirectory = targetWorkingDirectory.Substring(0, targetWorkingDirectory.LastIndexOf('/'));
+                    break;
+                default:
+                    targetWorkingDirectory += "/" + part;
+                    break;
+            }
+        }
+
+        if (!Directory.Exists(targetWorkingDirectory))
+        {
+            Console.WriteLine($"cd: {targetWorkingDirectory}: No such file or directory");
             return;
         }
-        workingDirectory = input.Parameters;
+        workingDirectory = targetWorkingDirectory;
     }
 
     static void PrintType(ShellInput input)
