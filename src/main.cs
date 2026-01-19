@@ -60,18 +60,32 @@ class Program
         string currentInput = "";
         bool insideSingleQuote = false;
         bool insideDoubleQuote = false;
+        bool escapeNextCharacter = false;
                 
         foreach (char c in input)
         {
-            if (c == '\"')
+            if (c == '\"' && !escapeNextCharacter)
             {
                 insideDoubleQuote = !insideDoubleQuote;
             }
-            else if (c == '\'' && !insideDoubleQuote)
+            else if (c == '\'' && !insideDoubleQuote && !escapeNextCharacter)
             {
                 insideSingleQuote = !insideSingleQuote;
             }
-            else if (c == ' ')
+            else if (insideDoubleQuote || insideSingleQuote)
+            {
+                currentInput += c;
+            }
+            else if (c == '\\')
+            {
+                escapeNextCharacter = true;
+            }
+            else if (escapeNextCharacter == true)
+            {
+                currentInput += c;
+                escapeNextCharacter = false;
+            }
+            else  if (c == ' ')
             {
                 if (insideSingleQuote || insideDoubleQuote)
                 {
