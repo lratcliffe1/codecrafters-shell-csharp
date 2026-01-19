@@ -54,6 +54,16 @@ class Program
         };
     }
 
+/// <summary>
+/// Single quotes disable all special meaning for characters enclosed within them.
+/// Double quotes disable all special meaning for characters except $ and \
+/// Backslash outside of quotes disables the next special characters meaning
+/// Backslach inside single quotes have not effect
+/// </summary>
+/// <param name="input"></param>
+/// <returns></returns>
+       
+
     static List<string> FormatInputString(string input)
     {
         List<string> output = [];
@@ -64,7 +74,7 @@ class Program
                 
         foreach (char c in input)
         {
-            if (c == '\"' && !escapeNextCharacter)
+            if (c == '\"' && !insideSingleQuote  && !escapeNextCharacter)
             {
                 insideDoubleQuote = !insideDoubleQuote;
             }
@@ -76,7 +86,7 @@ class Program
             {
                 currentInput += c;
             }
-            else if (c == '\\')
+            else if (c == '\\' && !insideSingleQuote)
             {
                 escapeNextCharacter = true;
             }
