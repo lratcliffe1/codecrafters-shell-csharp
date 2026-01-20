@@ -10,7 +10,7 @@ class Program
 
     while (true)
     {
-      ShellInput shellInput = GetCommandFromUser();
+      ShellContext shellInput = GetCommandFromUser();
 
       if (shellInput.RawInput == "")
         continue;
@@ -36,34 +36,36 @@ class Program
           break;
       }
 
-      if (shellInput.Error != null)
+      if (shellInput.ErrorTarget != null)
       {
         switch (shellInput.ErrorTarget)
         {
           case "Console":
-            Console.WriteLine(shellInput.Error);
+            if (!string.IsNullOrEmpty(shellInput.Error))
+              Console.WriteLine(shellInput.Error);
             break;
           default:
-            await FileExecuter.WriteToFile(shellInput);
+            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error);
             break;
         }
       }
-      if (shellInput.Output != null)
+      if (shellInput.OutputTarget != null)
       {
         switch (shellInput.OutputTarget)
         {
           case "Console":
-            Console.WriteLine(shellInput.Output);
+            if (!string.IsNullOrEmpty(shellInput.Output))
+              Console.WriteLine(shellInput.Output);
             break;
           default:
-            await FileExecuter.WriteToFile(shellInput);
+            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output);
             break;
         }
       }
     }
 }
 
-static ShellInput GetCommandFromUser()
+static ShellContext GetCommandFromUser()
 {
     Console.Write("$ ");
         
@@ -71,26 +73,41 @@ static ShellInput GetCommandFromUser()
 
     List<string> formattedInput = Parcer.ParceUserInput(input);
 
-    string? outputTarget = "Console";
+    string? errorTarget = null;
+    string? outputTarget = null;
 
+    var errorIndex = formattedInput.IndexOf("2>");
+    int outputIndex1 = formattedInput.IndexOf("1>");
     int outputIndex = formattedInput.IndexOf(">");
-    if (outputIndex != -1)
+    
+    if (errorIndex != -1)
     {
+      outputTarget = "Console";
+      errorTarget = formattedInput.Last();
+      formattedInput = formattedInput[..errorIndex];
+    } 
+    else if (outputIndex1 != -1)
+    {
+      errorTarget = "Console";
       outputTarget = formattedInput.Last();
-      formattedInput = formattedInput[..outputIndex];
+      formattedInput = formattedInput[..outputIndex1];
     }
-    outputIndex = formattedInput.IndexOf("1>");
-    if (outputIndex != -1)
+    else if (outputIndex != -1)
     {
+      errorTarget = "Console";
       outputTarget = formattedInput.Last();
       formattedInput = formattedInput[..outputIndex];
     }
 
-    return new ShellInput { 
+    if (errorTarget == null && outputTarget == null)
+      outputTarget = "Console";
+
+    return new ShellContext { 
       RawInput = input.ToLower(), 
       Command = formattedInput[0].ToLower(), 
       Parameters = formattedInput[1..],
       OutputTarget = outputTarget,
+      ErrorTarget = errorTarget,
     };
   }
 }

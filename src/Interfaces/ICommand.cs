@@ -4,5 +4,5 @@ namespace src.Interfaces;
 
 public interface IComannd
 {
-  void Run(ShellInput shellInput, ref string workingDirectory);
+  void Run(ShellContext shellInput, ref string workingDirectory);
 }

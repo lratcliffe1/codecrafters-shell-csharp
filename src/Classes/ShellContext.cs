@@ -1,6 +1,6 @@
 namespace src.Classes;
 
-public class ShellInput
+public class ShellContext
 {
     public required string RawInput { get; set; }
 

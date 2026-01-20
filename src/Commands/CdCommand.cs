@@ -4,7 +4,7 @@ namespace src.Commands;
 
 public static class CdCommand
 {
-  public static void Run(ShellInput shellInput, ref string workingDirectory)
+  public static void Run(ShellContext shellInput, ref string workingDirectory)
   {
     string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
 
@@ -42,7 +42,6 @@ public static class CdCommand
     if (!Directory.Exists(targetWorkingDirectory))
     {
         shellInput.Output = $"cd: {targetWorkingDirectory}: No such file or directory";
-        shellInput.OutputTarget = "Console";
         return;
     }
     shellInput.OutputTarget = null;

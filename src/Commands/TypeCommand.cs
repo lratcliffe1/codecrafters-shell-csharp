@@ -7,10 +7,8 @@ public static class TypeCommand
 {
   static readonly List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
 
-  public static void Run(ShellInput shellInput, ref string workingDirectory)
+  public static void Run(ShellContext shellInput, ref string workingDirectory)
   {
-    shellInput.OutputTarget = "Console";
-    
     if (builtInCommands.Contains(shellInput.Parameters[0]))
     {
       shellInput.Output = $"{shellInput.Parameters[0]} is a shell builtin";

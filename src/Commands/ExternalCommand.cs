@@ -7,7 +7,7 @@ namespace src.Commands;
 
 public static class ExternalCommand
 {
-  public static async Task Run(ShellInput shellInput)
+  public static async Task Run(ShellContext shellInput)
   {
     string? executablePath = FileExecuter.FindExecutablePath(shellInput.Command);
 
@@ -41,16 +41,8 @@ public static class ExternalCommand
 
       await process.WaitForExitAsync();
 
-      string finalError = errorBuilder.ToString().Trim();
-      string finalOutput = outputBuilder.ToString().Trim();
-
-      shellInput.Output = finalOutput;
-      
-      if (!string.IsNullOrEmpty(finalError))
-      {
-        shellInput.Error = finalError;
-        shellInput.ErrorTarget = "Console";
-      }
+      shellInput.Output = outputBuilder.ToString().Trim();
+      shellInput.Error = errorBuilder.ToString().Trim();
     }
     else
     {

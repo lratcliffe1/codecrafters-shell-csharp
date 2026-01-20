@@ -41,15 +41,15 @@ public static class FileExecuter
     return null;
   }
 
-  public static async Task WriteToFile(ShellInput shellInput)
+  public static async Task WriteToFile(string path, string? contents)
   {
-    string? directoryPath = Path.GetDirectoryName(shellInput.OutputTarget);
+    string? directoryPath = Path.GetDirectoryName(path);
 
     if (!string.IsNullOrEmpty(directoryPath))
     {
         Directory.CreateDirectory(directoryPath);
     }
 
-    await File.WriteAllTextAsync(shellInput.OutputTarget, shellInput.Output);
+    await File.WriteAllTextAsync(path, contents);
   }
 }
