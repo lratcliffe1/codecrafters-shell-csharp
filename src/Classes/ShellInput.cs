@@ -2,9 +2,17 @@ namespace src.Classes;
 
 public class ShellInput
 {
-    public required string Input { get; set; }
+    public required string RawInput { get; set; }
 
     public required string Command { get; set; }
 
     public required List<string> Parameters { get; set; }
+
+    public string? OutputTarget { get; set; }
+    
+    public string? Output { get; set; }
+
+    public string? ErrorTarget { get; set; }
+    
+    public string? Error { get; set; }
 }
