@@ -5,73 +5,55 @@ using src.Helpers;
 class Program
 {
   static async Task Main()
-  {        
-    string workingDirectory = Directory.GetCurrentDirectory();
+  {
+    ShellContext? shellContext = null;
 
     while (true)
     {
-      ShellContext shellInput = GetCommandFromUser();
+      string input = GetCommandFromUser();
 
-      if (shellInput.RawInput == "")
+      List<string> formattedInput = Parcer.ParceUserInput(input);
+
+      shellContext = CreateShellContext(input, formattedInput, shellContext?.WorkingDirectory);
+
+      if (shellContext.RawInput == "")
         continue;
 
-      switch (shellInput.Command)
+      switch (shellContext.Command)
       {
         case "exit":
           return;
         case "echo":
-          EchoCommand.Run(shellInput, ref workingDirectory);
+          EchoCommand.Run(shellContext);
           break;
         case "pwd":
-          PwdCommand.Run(shellInput, ref workingDirectory);
+          PwdCommand.Run(shellContext);
           break;
         case "cd":
-          CdCommand.Run(shellInput, ref workingDirectory);
+          CdCommand.Run(shellContext);
           break;
         case "type":
-          TypeCommand.Run(shellInput, ref workingDirectory);
+          TypeCommand.Run(shellContext);
           break;
         default:
-          await ExternalCommand.Run(shellInput);
+          await ExternalCommand.Run(shellContext);
           break;
       }
 
-      if (shellInput.ErrorTarget != null)
-      {
-        switch (shellInput.ErrorTarget)
-        {
-          case "Console":
-            if (!string.IsNullOrEmpty(shellInput.Error))
-              Console.WriteLine(shellInput.Error);
-            break;
-          default:
-            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error);
-            break;
-        }
-      }
-      if (shellInput.OutputTarget != null)
-      {
-        switch (shellInput.OutputTarget)
-        {
-          case "Console":
-            if (!string.IsNullOrEmpty(shellInput.Output))
-              Console.WriteLine(shellInput.Output);
-            break;
-          default:
-            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output);
-            break;
-        }
-      }
+      await OutputResult(shellContext);
     }
-}
+  }
 
-static ShellContext GetCommandFromUser()
-{
+  static string GetCommandFromUser()
+  {
     Console.Write("$ ");
         
-    string input = Console.ReadLine() ?? "";
+    return Console.ReadLine() ?? "";
+  }
 
-    List<string> formattedInput = Parcer.ParceUserInput(input);
+  static ShellContext CreateShellContext(string input, List<string> formattedInput, string? workingDirectory)
+  {
+    workingDirectory ??= Directory.GetCurrentDirectory();
 
     string? errorTarget = null;
     string? outputTarget = null;
@@ -108,6 +90,38 @@ static ShellContext GetCommandFromUser()
       Parameters = formattedInput[1..],
       OutputTarget = outputTarget,
       ErrorTarget = errorTarget,
+      WorkingDirectory = workingDirectory,
     };
   }
+
+  static async Task OutputResult(ShellContext shellInput)
+  {
+    if (shellInput.ErrorTarget != null)
+      {
+        switch (shellInput.ErrorTarget)
+        {
+          case "Console":
+            if (!string.IsNullOrEmpty(shellInput.Error))
+              Console.WriteLine(shellInput.Error);
+            break;
+          default:
+            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error);
+            break;
+        }
+      }
+      if (shellInput.OutputTarget != null)
+      {
+        switch (shellInput.OutputTarget)
+        {
+          case "Console":
+            if (!string.IsNullOrEmpty(shellInput.Output))
+              Console.WriteLine(shellInput.Output);
+            break;
+          default:
+            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output);
+            break;
+        }
+      }
+  }
 }
+

@@ -4,7 +4,7 @@ namespace src.Commands;
 
 public static class CdCommand
 {
-  public static void Run(ShellContext shellInput, ref string workingDirectory)
+  public static void Run(ShellContext shellInput)
   {
     string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
 
@@ -15,7 +15,7 @@ public static class CdCommand
         parts = parts[0..^1];
     }
 
-    string targetWorkingDirectory = workingDirectory;
+    string targetWorkingDirectory = shellInput.WorkingDirectory;
 
     foreach (string part in parts)
     {
@@ -28,7 +28,7 @@ public static class CdCommand
                 targetWorkingDirectory = "";
                 break;
             case ".":
-                targetWorkingDirectory = workingDirectory;
+                targetWorkingDirectory = shellInput.WorkingDirectory;
                 break;
             case "..":
                 targetWorkingDirectory = targetWorkingDirectory.Substring(0, targetWorkingDirectory.LastIndexOf('/'));
@@ -45,6 +45,6 @@ public static class CdCommand
         return;
     }
     shellInput.OutputTarget = null;
-    workingDirectory = targetWorkingDirectory;
+    shellInput.WorkingDirectory = targetWorkingDirectory;
   }
 }

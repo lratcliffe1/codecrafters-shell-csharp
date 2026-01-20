@@ -7,7 +7,7 @@ public static class TypeCommand
 {
   static readonly List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
 
-  public static void Run(ShellContext shellInput, ref string workingDirectory)
+  public static void Run(ShellContext shellInput)
   {
     if (builtInCommands.Contains(shellInput.Parameters[0]))
     {

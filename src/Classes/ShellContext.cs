@@ -8,6 +8,8 @@ public class ShellContext
 
     public required List<string> Parameters { get; set; }
 
+    public required string WorkingDirectory { get; set; }
+
     public string? OutputTarget { get; set; }
     
     public string? Output { get; set; }
