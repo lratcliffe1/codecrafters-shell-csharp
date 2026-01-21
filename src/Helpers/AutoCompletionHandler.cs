@@ -2,7 +2,7 @@ using src.Helpers;
 
 class AutoCompletionHandler : IAutoCompleteHandler
 {
-    public char[] Separators { get; set; } = " ".ToArray(); // Only space as separator for command names
+    public char[] Separators { get; set; } = [' ', '.', '/'];
     
     private readonly string[] _commands = ["exit", "echo", "pwd", "cd", "type"];
     private string _lastPrefix = "";
@@ -30,7 +30,7 @@ class AutoCompletionHandler : IAutoCompleteHandler
         if (matches.Count == 1)
         {
             _tabCount = 0;
-            return [matches[0][text.Length..] + " "];
+            return [$"{matches[0]} "];
         }
 
         if (text == _lastPrefix)
