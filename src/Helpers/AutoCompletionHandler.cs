@@ -17,9 +17,10 @@ class AutoCompletionHandler : IAutoCompleteHandler
 
     if (!foundCommands.Any())
     {
-      Console.Beep();
-      return null!;
+      // Console.Beep();
+      return ["\x07"];
     }
+
     return foundCommands
       .Select(c => c[text.Length..] + " ")
       .ToArray();
