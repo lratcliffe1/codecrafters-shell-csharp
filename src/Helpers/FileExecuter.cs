@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using src.Classes;
 
 namespace src.Helpers;
@@ -22,16 +23,23 @@ public static class FileExecuter
         {
           if (!File.Exists(file))
             continue;
-      
-          UnixFileMode mode = File.GetUnixFileMode(file);
 
-          bool isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || 
-            mode.HasFlag(UnixFileMode.GroupExecute) || 
-            mode.HasFlag(UnixFileMode.OtherExecute);
+          bool isExecutable = false;
+
+          if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+          {
+              UnixFileMode mode = File.GetUnixFileMode(file);
+              isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || mode.HasFlag(UnixFileMode.GroupExecute) || mode.HasFlag(UnixFileMode.OtherExecute);
+          }
+          else
+          {
+              string extension = Path.GetExtension(file).ToLowerInvariant();
+              isExecutable = extension == ".exe" || extension == ".bat" || extension == ".cmd" || extension == ".com";
+          }
 
           if (isExecutable && Path.GetFileName(file) == fileName)
           {
-            return file;
+              return file;
           }
         }
         catch {}
@@ -41,7 +49,7 @@ public static class FileExecuter
     return null;
   }
 
-  public static async Task WriteToFile(string path, string? contents)
+  public static async Task WriteToFile(string path, string? contents, OutputType? outputType)
   {
     string? directoryPath = Path.GetDirectoryName(path);
 
@@ -50,6 +58,9 @@ public static class FileExecuter
         Directory.CreateDirectory(directoryPath);
     }
 
-    await File.WriteAllTextAsync(path, contents);
+    if (outputType == OutputType.Redirect)
+      await File.WriteAllTextAsync(path, contents);
+    else if (outputType == OutputType.Append)
+      await File.AppendAllTextAsync(path, Environment.NewLine + contents);
   }
 }

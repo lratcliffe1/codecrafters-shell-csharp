@@ -57,28 +57,48 @@ class Program
 
     string? errorTarget = null;
     string? outputTarget = null;
+    OutputType? outputType = null;
 
+    var appendIndex1 = formattedInput.IndexOf("1>>");
+    var appendIndex = formattedInput.IndexOf(">>");
     var errorIndex = formattedInput.IndexOf("2>");
     int outputIndex1 = formattedInput.IndexOf("1>");
     int outputIndex = formattedInput.IndexOf(">");
     
-    if (errorIndex != -1)
+    if (appendIndex1 != -1)
+    {
+      errorTarget = "Console";
+      outputTarget = formattedInput.Last();
+      formattedInput = formattedInput[..appendIndex1];
+      outputType = OutputType.Append;
+    }
+    else if (appendIndex != -1)
+    {
+      errorTarget = "Console";
+      outputTarget = formattedInput.Last();
+      formattedInput = formattedInput[..appendIndex];
+      outputType = OutputType.Append;
+    }
+    else if (errorIndex != -1)
     {
       outputTarget = "Console";
       errorTarget = formattedInput.Last();
       formattedInput = formattedInput[..errorIndex];
+      outputType = OutputType.Redirect;
     } 
     else if (outputIndex1 != -1)
     {
       errorTarget = "Console";
       outputTarget = formattedInput.Last();
       formattedInput = formattedInput[..outputIndex1];
+      outputType = OutputType.Redirect;
     }
     else if (outputIndex != -1)
     {
       errorTarget = "Console";
       outputTarget = formattedInput.Last();
       formattedInput = formattedInput[..outputIndex];
+      outputType = OutputType.Redirect;
     }
 
     if (errorTarget == null && outputTarget == null)
@@ -91,6 +111,7 @@ class Program
       OutputTarget = outputTarget,
       ErrorTarget = errorTarget,
       WorkingDirectory = workingDirectory,
+      OutputType = outputType,
     };
   }
 
@@ -105,7 +126,7 @@ class Program
               Console.WriteLine(shellInput.Error);
             break;
           default:
-            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error);
+            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error, shellInput.OutputType);
             break;
         }
       }
@@ -118,7 +139,7 @@ class Program
               Console.WriteLine(shellInput.Output);
             break;
           default:
-            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output);
+            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output, shellInput.OutputType);
             break;
         }
       }

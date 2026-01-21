@@ -10,6 +10,8 @@ public class ShellContext
 
     public required string WorkingDirectory { get; set; }
 
+    public OutputType? OutputType { get; set; }
+
     public string? OutputTarget { get; set; }
     
     public string? Output { get; set; }
@@ -17,4 +19,11 @@ public class ShellContext
     public string? ErrorTarget { get; set; }
     
     public string? Error { get; set; }
+}
+
+public enum OutputType
+{
+    None = 0,
+    Redirect = 1,
+    Append = 2,
 }
