@@ -13,7 +13,14 @@ class AutoCompletionHandler : IAutoCompleteHandler
     if (string.IsNullOrWhiteSpace(text))
       return null!;
 
-    return _commands.Where(c => c.StartsWith(text))
+    var foundCommands = _commands.Where(c => c.StartsWith(text));
+
+    if (!foundCommands.Any())
+    {
+      Console.Beep();
+      return null!;
+    }
+    return foundCommands
       .Select(c => c[text.Length..] + " ")
       .ToArray();
   }
