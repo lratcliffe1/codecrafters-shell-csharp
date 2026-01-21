@@ -6,11 +6,16 @@ class Program
 {
   static async Task Main()
   {
+    ReadLine.AutoCompletionHandler = new AutoCompletionHandler();
+
     ShellContext? shellContext = null;
 
     while (true)
     {
       string input = GetCommandFromUser();
+
+      if (input == "")
+        continue;
 
       List<string> formattedInput = Parcer.ParceUserInput(input);
 
@@ -48,7 +53,7 @@ class Program
   {
     Console.Write("$ ");
         
-    return Console.ReadLine() ?? "";
+    return ReadLine.Read() ?? "";
   }
 
   static ShellContext CreateShellContext(string input, List<string> formattedInput, string? workingDirectory)
