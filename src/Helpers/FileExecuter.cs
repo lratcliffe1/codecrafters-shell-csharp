@@ -7,46 +7,21 @@ public static class FileExecuter
 {
   public static string? FindExecutablePath(string fileName)
   {
-    string paths = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-    char separator = Path.PathSeparator;
+    return GetPathSegments()
+      .SelectMany(Directory.EnumerateFiles)
+      .Where(IsExecutable)
+      .FirstOrDefault(file => Path.GetFileName(file).Equals(fileName, StringComparison.OrdinalIgnoreCase));
+  }
 
-    foreach (string path in paths.Split(separator))
-    {
-      if (!Directory.Exists(path))
-        continue;
-
-      string[] files = Directory.GetFiles(path);
-
-      foreach (string file in files)
-      {
-        try
-        {
-          if (!File.Exists(file))
-            continue;
-
-          bool isExecutable = false;
-
-          if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-          {
-              UnixFileMode mode = File.GetUnixFileMode(file);
-              isExecutable = mode.HasFlag(UnixFileMode.UserExecute) || mode.HasFlag(UnixFileMode.GroupExecute) || mode.HasFlag(UnixFileMode.OtherExecute);
-          }
-          else
-          {
-              string extension = Path.GetExtension(file).ToLowerInvariant();
-              isExecutable = extension == ".exe" || extension == ".bat" || extension == ".cmd" || extension == ".com";
-          }
-
-          if (isExecutable && Path.GetFileName(file) == fileName)
-          {
-              return file;
-          }
-        }
-        catch {}
-      }
-    }
-
-    return null;
+  public static string[] FindExecutablesAtPath(string? optionalPath = null)
+  {
+    return GetPathSegments(optionalPath)
+      .SelectMany(Directory.EnumerateFiles)
+      .Where(IsExecutable)
+      .Select(Path.GetFileName)
+      .OfType<string>()
+      .Distinct()
+      .ToArray();
   }
 
   public static async Task WriteToFile(string path, string? contents, OutputType? outputType)
@@ -54,9 +29,7 @@ public static class FileExecuter
     string? directoryPath = Path.GetDirectoryName(path);
 
     if (!string.IsNullOrEmpty(directoryPath))
-    {
         Directory.CreateDirectory(directoryPath);
-    }
 
     if (outputType == OutputType.Redirect)
       await File.WriteAllTextAsync(path, contents);
@@ -68,6 +41,31 @@ public static class FileExecuter
         await File.AppendAllTextAsync(path, Environment.NewLine + contents);
       else 
         await File.AppendAllTextAsync(path, contents);
+    }
+  }
+
+  private static IEnumerable<string> GetPathSegments(string? customPath = null)
+  {
+    string paths = customPath ?? Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+    return paths.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries).Where(Directory.Exists);
+  }
+
+  private static bool IsExecutable(string file)
+  {
+    try
+    {
+      if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      {
+        UnixFileMode mode = File.GetUnixFileMode(file);
+        return mode.HasFlag(UnixFileMode.UserExecute) || mode.HasFlag(UnixFileMode.GroupExecute) || mode.HasFlag(UnixFileMode.OtherExecute);
+      }
+
+      string extension = Path.GetExtension(file).ToLowerInvariant();
+      return extension == ".exe" || extension == ".bat" || extension == ".cmd" || extension == ".com";
+    }
+    catch
+    {
+      return false;
     }
   }
 }

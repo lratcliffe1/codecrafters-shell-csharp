@@ -1,3 +1,5 @@
+using src.Helpers;
+
 class AutoCompletionHandler : IAutoCompleteHandler
 {
   public char[] Separators { get; set; }
@@ -13,15 +15,26 @@ class AutoCompletionHandler : IAutoCompleteHandler
     if (string.IsNullOrWhiteSpace(text))
       return null!;
 
-    var foundCommands = _commands.Where(c => c.StartsWith(text));
+    string[] foundCommands = 
+    [
+      ..GetCommandSuggestions(text),
+      ..GetExternalCommandSuggestions(text),
+    ];
 
-    if (!foundCommands.Any())
-    {
-      // Console.Beep();
-      return ["\x07"];
-    }
+    return foundCommands.Any() ? foundCommands : ["\x07"];
+  }
 
-    return foundCommands
+  private string[] GetCommandSuggestions(string text)
+  {
+    return _commands.Where(c => c.StartsWith(text))
+      .Select(c => c[text.Length..] + " ")
+      .ToArray();
+  }
+
+  private static string[] GetExternalCommandSuggestions(string text)
+  {
+    return FileExecuter.FindExecutablesAtPath()
+      .Where(c => c.StartsWith(text))
       .Select(c => c[text.Length..] + " ")
       .ToArray();
   }
