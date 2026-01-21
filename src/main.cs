@@ -4,9 +4,11 @@ using src.Helpers;
 
 class Program
 {
+  private static readonly AutoCompletionHandler _handler = new AutoCompletionHandler();
+
   static async Task Main()
   {
-    ReadLine.AutoCompletionHandler = new AutoCompletionHandler();
+    ReadLine.AutoCompletionHandler = _handler;
 
     ShellContext? shellContext = null;
 
@@ -51,9 +53,9 @@ class Program
 
   static string GetCommandFromUser()
   {
-    Console.Write("$ ");
-        
-    return ReadLine.Read() ?? "";
+    string input = ReadLine.Read("$ ");
+    _handler.Reset();
+    return input ?? "";
   }
 
   static ShellContext CreateShellContext(string input, List<string> formattedInput, string? workingDirectory)
