@@ -55,54 +55,36 @@ class Program
   {
     workingDirectory ??= Directory.GetCurrentDirectory();
 
+    var operators = new[] {
+      (Token: "2>>", IsError: true,  Type: OutputType.Append),
+      (Token: "1>>", IsError: false, Type: OutputType.Append),
+      (Token: ">>",  IsError: false, Type: OutputType.Append),
+      (Token: "2>",  IsError: true,  Type: OutputType.Redirect),
+      (Token: "1>",  IsError: false, Type: OutputType.Redirect),
+      (Token: ">",   IsError: false, Type: OutputType.Redirect)
+    };
+
     string? errorTarget = null;
     string? outputTarget = null;
     OutputType? outputType = null;
 
-    var appendIndex1 = formattedInput.IndexOf("1>>");
-    var appendIndex = formattedInput.IndexOf(">>");
-    var errorIndex = formattedInput.IndexOf("2>");
-    int outputIndex1 = formattedInput.IndexOf("1>");
-    int outputIndex = formattedInput.IndexOf(">");
-    
-    if (appendIndex1 != -1)
+    foreach (var (token, isError, type) in operators)
     {
-      errorTarget = "Console";
-      outputTarget = formattedInput.Last();
-      formattedInput = formattedInput[..appendIndex1];
-      outputType = OutputType.Append;
-    }
-    else if (appendIndex != -1)
-    {
-      errorTarget = "Console";
-      outputTarget = formattedInput.Last();
-      formattedInput = formattedInput[..appendIndex];
-      outputType = OutputType.Append;
-    }
-    else if (errorIndex != -1)
-    {
-      outputTarget = "Console";
-      errorTarget = formattedInput.Last();
-      formattedInput = formattedInput[..errorIndex];
-      outputType = OutputType.Redirect;
-    } 
-    else if (outputIndex1 != -1)
-    {
-      errorTarget = "Console";
-      outputTarget = formattedInput.Last();
-      formattedInput = formattedInput[..outputIndex1];
-      outputType = OutputType.Redirect;
-    }
-    else if (outputIndex != -1)
-    {
-      errorTarget = "Console";
-      outputTarget = formattedInput.Last();
-      formattedInput = formattedInput[..outputIndex];
-      outputType = OutputType.Redirect;
+      int index = formattedInput.IndexOf(token);
+      if (index != -1)
+      {
+        outputType = type;
+        string target = formattedInput.Last();
+        
+        errorTarget = isError ? target : "Console";
+        outputTarget = isError ? "Console" : target;
+        
+        formattedInput = formattedInput[..index];
+        break;
+      }
     }
 
-    if (errorTarget == null && outputTarget == null)
-      outputTarget = "Console";
+    outputTarget ??= "Console";
 
     return new ShellContext { 
       RawInput = input.ToLower(), 

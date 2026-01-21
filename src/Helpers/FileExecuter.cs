@@ -61,6 +61,13 @@ public static class FileExecuter
     if (outputType == OutputType.Redirect)
       await File.WriteAllTextAsync(path, contents);
     else if (outputType == OutputType.Append)
-      await File.AppendAllTextAsync(path, Environment.NewLine + contents);
+    {
+      bool hasContent = File.Exists(path) && new FileInfo(path).Length > 0;
+    
+      if (hasContent)
+        await File.AppendAllTextAsync(path, Environment.NewLine + contents);
+      else 
+        await File.AppendAllTextAsync(path, contents);
+    }
   }
 }
