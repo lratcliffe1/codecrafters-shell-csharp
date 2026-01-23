@@ -2,8 +2,8 @@ using src.Helpers;
 
 class AutoCompletionHandler : IAutoCompleteHandler
 {
-    public char[] Separators { get; set; } = [' ', '.', '/'];
-    
+    public char[] Separators { get; set; } = "abcdefghijklmnopqrstuvwxyz".ToArray();
+
     private readonly string[] _commands = ["exit", "echo", "pwd", "cd", "type"];
     private string _lastPrefix = "";
     private int _tabCount = 0;
@@ -30,7 +30,7 @@ class AutoCompletionHandler : IAutoCompleteHandler
         if (matches.Count == 1)
         {
             _tabCount = 0;
-            return [$"{matches[0]} "];
+            return [$"{matches[0][text.Length..]} "];
         }
 
         if (text == _lastPrefix)
@@ -53,7 +53,7 @@ class AutoCompletionHandler : IAutoCompleteHandler
             Console.WriteLine();
             Console.WriteLine(string.Join("  ", matches));
             Console.Write($"$ {text}");
-            
+
             _tabCount = 0;
             return null!;
         }

@@ -82,10 +82,10 @@ class Program
       {
         outputType = type;
         string target = formattedInput.Last();
-        
+
         errorTarget = isError ? target : "Console";
         outputTarget = isError ? "Console" : target;
-        
+
         formattedInput = formattedInput[..index];
         break;
       }
@@ -93,9 +93,10 @@ class Program
 
     outputTarget ??= "Console";
 
-    return new ShellContext { 
-      RawInput = input.ToLower(), 
-      Command = formattedInput[0].ToLower(), 
+    return new ShellContext
+    {
+      RawInput = input.ToLower(),
+      Command = formattedInput[0].ToLower(),
       Parameters = formattedInput[1..],
       OutputTarget = outputTarget,
       ErrorTarget = errorTarget,
@@ -107,31 +108,31 @@ class Program
   static async Task OutputResult(ShellContext shellInput)
   {
     if (shellInput.ErrorTarget != null)
+    {
+      switch (shellInput.ErrorTarget)
       {
-        switch (shellInput.ErrorTarget)
-        {
-          case "Console":
-            if (!string.IsNullOrEmpty(shellInput.Error))
-              Console.WriteLine(shellInput.Error);
-            break;
-          default:
-            await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error, shellInput.OutputType);
-            break;
-        }
+        case "Console":
+          if (!string.IsNullOrEmpty(shellInput.Error))
+            Console.WriteLine(shellInput.Error);
+          break;
+        default:
+          await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error, shellInput.OutputType);
+          break;
       }
-      if (shellInput.OutputTarget != null)
+    }
+    if (shellInput.OutputTarget != null)
+    {
+      switch (shellInput.OutputTarget)
       {
-        switch (shellInput.OutputTarget)
-        {
-          case "Console":
-            if (!string.IsNullOrEmpty(shellInput.Output))
-              Console.WriteLine(shellInput.Output);
-            break;
-          default:
-            await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output, shellInput.OutputType);
-            break;
-        }
+        case "Console":
+          if (!string.IsNullOrEmpty(shellInput.Output))
+            Console.WriteLine(shellInput.Output);
+          break;
+        default:
+          await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output, shellInput.OutputType);
+          break;
       }
+    }
   }
 }
 
