@@ -35,6 +35,7 @@ class Program
       switch (shellContext.Command)
       {
         case "exit":
+          ExitCommand.Run(shellContext);
           return;
         case "echo":
           EchoCommand.Run(shellContext);
