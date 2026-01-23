@@ -9,13 +9,17 @@ class Program
     var autocomplete = new AutoCompletionEngine();
     var readline = new ReadLineEngine(autocomplete);
 
+    var history = LoadHistoryFromHistFile();
+
     ShellContext shellContext = new ShellContext()
     {
       RawInput = "",
       Command = "",
       Parameters = [],
       WorkingDirectory = Directory.GetCurrentDirectory(),
-      History = LoadHistoryFromHistFile(),
+      History = history,
+      HistoryAppended = 0,
+      HistoryLoaded = history.Count,
     };
 
     while (true)
@@ -121,6 +125,8 @@ class Program
       WorkingDirectory = previousShellContext.WorkingDirectory,
       OutputType = outputType,
       History = previousShellContext.History.Append(input).ToList(),
+      HistoryAppended = previousShellContext.HistoryAppended,
+      HistoryLoaded = previousShellContext.HistoryLoaded,
     };
   }
 

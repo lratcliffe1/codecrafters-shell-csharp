@@ -12,7 +12,7 @@ public static class ExitCommand
 
     string content = "";
 
-    foreach (var input in shellContext.History)
+    foreach (var input in shellContext.History.Skip(shellContext.HistoryLoaded))
     {
       content += $"{input}\n";
     }
