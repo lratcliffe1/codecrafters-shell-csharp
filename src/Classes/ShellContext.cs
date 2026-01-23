@@ -11,6 +11,7 @@ public class ShellContext
     public string? Output { get; set; }
     public string? ErrorTarget { get; set; }
     public string? Error { get; set; }
+    public required List<string> History { get; set; }
 }
 
 public enum OutputType

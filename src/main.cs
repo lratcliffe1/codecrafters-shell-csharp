@@ -21,7 +21,7 @@ class Program
 
       List<string> formattedInput = Parcer.ParceUserInput(input);
 
-      shellContext = CreateShellContext(input, formattedInput, shellContext?.WorkingDirectory);
+      shellContext = CreateShellContext(input, formattedInput, shellContext);
 
       if (shellContext.RawInput == "")
         continue;
@@ -42,6 +42,9 @@ class Program
         case "type":
           TypeCommand.Run(shellContext);
           break;
+        case "history":
+          HistoryCommand.Run(shellContext);
+          break;
         default:
           await ExternalCommand.Run(shellContext);
           break;
@@ -58,9 +61,16 @@ class Program
     return input ?? "";
   }
 
-  static ShellContext CreateShellContext(string input, List<string> formattedInput, string? workingDirectory)
+  static ShellContext CreateShellContext(string input, List<string> formattedInput, ShellContext? previousShellContext)
   {
-    workingDirectory ??= Directory.GetCurrentDirectory();
+    string workingDirectory = Directory.GetCurrentDirectory();
+    List<string> history = [input];
+
+    if (previousShellContext != null)
+    {
+      workingDirectory = previousShellContext.WorkingDirectory;
+      history.InsertRange(0, previousShellContext.History);
+    }
 
     var operators = new[] {
       (Token: "2>>", IsError: true,  Type: OutputType.Append),
@@ -102,6 +112,7 @@ class Program
       ErrorTarget = errorTarget,
       WorkingDirectory = workingDirectory,
       OutputType = outputType,
+      History = history,
     };
   }
 

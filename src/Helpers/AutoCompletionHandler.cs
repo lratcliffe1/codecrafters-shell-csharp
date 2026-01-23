@@ -4,7 +4,7 @@ class AutoCompletionHandler : IAutoCompleteHandler
 {
   public char[] Separators { get; set; } = "abcdefghijklmnopqrstuvwxyz_".ToArray();
 
-  private readonly string[] _commands = ["exit", "echo", "pwd", "cd", "type"];
+  private readonly string[] _commands = CommandConstants.All;
   private string _lastPrefix = "";
   private int _tabCount = 0;
 

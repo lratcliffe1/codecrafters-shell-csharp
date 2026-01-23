@@ -5,7 +5,7 @@ namespace src.Commands;
 
 public static class TypeCommand
 {
-  static readonly List<string> builtInCommands = ["exit", "echo", "type", "pwd", "cd"];
+  static readonly List<string> builtInCommands = [.. CommandConstants.All];
 
   public static void Run(ShellContext shellInput)
   {
