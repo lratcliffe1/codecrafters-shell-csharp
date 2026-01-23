@@ -9,7 +9,14 @@ class Program
     var autocomplete = new AutoCompletionEngine();
     var readline = new ReadLineEngine(autocomplete);
 
-    ShellContext? shellContext = null;
+    ShellContext shellContext = new ShellContext()
+    {
+      RawInput = "",
+      Command = "",
+      Parameters = [],
+      WorkingDirectory = Directory.GetCurrentDirectory(),
+      History = LoadHistoryFromHistFile(),
+    };
 
     while (true)
     {
@@ -53,23 +60,25 @@ class Program
     }
   }
 
+  static List<string> LoadHistoryFromHistFile()
+  {
+    var historyFilePath = Environment.GetEnvironmentVariable("HISTFILE");
+    if (string.IsNullOrEmpty(historyFilePath))
+      return [];
+
+    string fileContent = File.ReadAllText(historyFilePath);
+
+    return fileContent.Split("\n").SkipLast(1).ToList();
+  }
+
   static string GetCommandFromUser(ReadLineEngine readLine)
   {
     var input = readLine.ReadLine("$ ");
     return input ?? "";
   }
 
-  static ShellContext CreateShellContext(string input, List<string> formattedInput, ShellContext? previousShellContext)
+  static ShellContext CreateShellContext(string input, List<string> formattedInput, ShellContext previousShellContext)
   {
-    string workingDirectory = Directory.GetCurrentDirectory();
-    List<string> history = [input];
-
-    if (previousShellContext != null)
-    {
-      workingDirectory = previousShellContext.WorkingDirectory;
-      history.InsertRange(0, previousShellContext.History);
-    }
-
     var operators = new[] {
       (Token: "2>>", IsError: true,  Type: OutputType.Append),
       (Token: "1>>", IsError: false, Type: OutputType.Append),
@@ -108,9 +117,9 @@ class Program
       Parameters = formattedInput[1..],
       OutputTarget = outputTarget,
       ErrorTarget = errorTarget,
-      WorkingDirectory = workingDirectory,
+      WorkingDirectory = previousShellContext.WorkingDirectory,
       OutputType = outputType,
-      History = history,
+      History = previousShellContext.History.Append(input).ToList(),
     };
   }
 
