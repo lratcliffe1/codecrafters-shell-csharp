@@ -11,7 +11,9 @@ public static class HistoryCommand
     else if (shellContext.Parameters.Count == 1 && int.TryParse(shellContext.Parameters[0], out int commandLimit))
       PrintLimitedHistory(shellContext, commandLimit);
     else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-r")
-      PrintHistoryFromFile(shellContext);
+      ReadHistoryFromFile(shellContext);
+    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-w")
+      WriteHistoryToFile(shellContext);
   }
 
   private static void PrintFullHistory(ShellContext shellContext)
@@ -37,7 +39,7 @@ public static class HistoryCommand
     }
   }
 
-  private static void PrintHistoryFromFile(ShellContext shellContext)
+  private static void ReadHistoryFromFile(ShellContext shellContext)
   {
     string fileContent = File.ReadAllText(shellContext.Parameters[1]);
 
@@ -45,5 +47,17 @@ public static class HistoryCommand
     {
       shellContext.History.Add(input);
     }
+  }
+
+  private static void WriteHistoryToFile(ShellContext shellContext)
+  {
+    string content = "";
+
+    foreach (var input in shellContext.History)
+    {
+      content += $"{input}\n";
+    }
+
+    File.WriteAllText(shellContext.Parameters[1], content);
   }
 }
