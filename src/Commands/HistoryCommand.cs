@@ -4,24 +4,46 @@ namespace src.Commands;
 
 public static class HistoryCommand
 {
-  public static void Run(ShellContext shellInput)
+  public static void Run(ShellContext shellContext)
   {
-    List<string> splitInput = shellInput.History.Last().Split(" ").ToList();
+    if (shellContext.Parameters.Count == 0)
+      PrintFullHistory(shellContext);
+    else if (shellContext.Parameters.Count == 1 && int.TryParse(shellContext.Parameters[0], out int commandLimit))
+      PrintLimitedHistory(shellContext, commandLimit);
+    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-r")
+      PrintHistoryFromFile(shellContext);
+  }
 
-    int count = shellInput.History.Count;
-    int limit = count;
+  private static void PrintFullHistory(ShellContext shellContext)
+  {
+    int index = 1;
 
-    if (splitInput.Count > 1 && int.TryParse(splitInput[1], out int commandLimit))
+    foreach (var input in shellContext.History)
     {
-      limit = commandLimit;
+      Console.WriteLine($"{index++} {input}");
     }
+  }
+
+  private static void PrintLimitedHistory(ShellContext shellContext, int limit)
+  {
+    int count = shellContext.History.Count;
 
     int skip = count - limit;
     int index = 1 + skip;
 
-    foreach (var input in shellInput.History.Skip(skip))
+    foreach (var input in shellContext.History.Skip(skip))
     {
       Console.WriteLine($"{index++} {input}");
+    }
+  }
+
+  private static void PrintHistoryFromFile(ShellContext shellContext)
+  {
+    string fileContent = File.ReadAllText(shellContext.Parameters[1]);
+
+    foreach (var input in fileContent.Split("\n").SkipLast(1))
+    {
+      shellContext.History.Add(input);
     }
   }
 }
