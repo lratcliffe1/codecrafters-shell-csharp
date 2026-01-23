@@ -28,7 +28,7 @@ public static class ExternalCommand
 
       foreach (var param in shellInput.Parameters)
       {
-          process.StartInfo.ArgumentList.Add(param);
+        process.StartInfo.ArgumentList.Add(param);
       }
 
       process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };

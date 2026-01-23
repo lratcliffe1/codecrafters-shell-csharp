@@ -14,7 +14,7 @@ public static class TypeCommand
       shellInput.Output = $"{shellInput.Parameters[0]} is a shell builtin";
       return;
     }
-    
+
     string? executablePath = FileExecuter.FindExecutablePath(shellInput.Parameters[0]);
 
     if (executablePath != null)

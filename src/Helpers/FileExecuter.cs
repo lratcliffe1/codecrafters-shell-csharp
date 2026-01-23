@@ -29,17 +29,17 @@ public static class FileExecuter
     string? directoryPath = Path.GetDirectoryName(path);
 
     if (!string.IsNullOrEmpty(directoryPath))
-        Directory.CreateDirectory(directoryPath);
+      Directory.CreateDirectory(directoryPath);
 
     if (outputType == OutputType.Redirect)
       await File.WriteAllTextAsync(path, contents);
     else if (outputType == OutputType.Append)
     {
       bool hasContent = File.Exists(path) && new FileInfo(path).Length > 0;
-    
+
       if (hasContent)
         await File.AppendAllTextAsync(path, Environment.NewLine + contents);
-      else 
+      else
         await File.AppendAllTextAsync(path, contents);
     }
   }
