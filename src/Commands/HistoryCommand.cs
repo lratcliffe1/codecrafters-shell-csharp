@@ -6,12 +6,22 @@ public static class HistoryCommand
 {
   public static void Run(ShellContext shellInput)
   {
-    int index = 1;
+    List<string> splitInput = shellInput.History.Last().Split(" ").ToList();
 
-    foreach (var input in shellInput.History)
+    int count = shellInput.History.Count;
+    int limit = count;
+
+    if (splitInput.Count > 1 && int.TryParse(splitInput[1], out int commandLimit))
     {
-      Console.WriteLine($"{index} {input}");
-      index++;
+      limit = commandLimit;
+    }
+
+    int skip = count - limit;
+    int index = 1 + skip;
+
+    foreach (var input in shellInput.History.Skip(skip))
+    {
+      Console.WriteLine($"{index++} {input}");
     }
   }
 }
