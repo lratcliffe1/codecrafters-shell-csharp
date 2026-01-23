@@ -4,6 +4,8 @@ namespace src.Commands;
 
 public static class HistoryCommand
 {
+  private static int historyAppended = 0;
+
   public static void Run(ShellContext shellContext)
   {
     if (shellContext.Parameters.Count == 0)
@@ -14,6 +16,8 @@ public static class HistoryCommand
       ReadHistoryFromFile(shellContext);
     else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-w")
       WriteHistoryToFile(shellContext);
+    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-a")
+      AppendHistoryToFile(shellContext);
   }
 
   private static void PrintFullHistory(ShellContext shellContext)
@@ -56,8 +60,22 @@ public static class HistoryCommand
     foreach (var input in shellContext.History)
     {
       content += $"{input}\n";
+      historyAppended++;
     }
 
     File.WriteAllText(shellContext.Parameters[1], content);
+  }
+
+  private static void AppendHistoryToFile(ShellContext shellContext)
+  {
+    string content = "";
+
+    foreach (var input in shellContext.History.Skip(historyAppended))
+    {
+      content += $"{input}\n";
+    }
+
+    File.AppendAllText(shellContext.Parameters[1], content);
+    historyAppended = shellContext.History.Count;
   }
 }
