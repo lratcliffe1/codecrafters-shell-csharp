@@ -1,6 +1,6 @@
 using src.Helpers;
 
-class AutoCompletionHandler : IAutoCompleteHandler
+public sealed class AutoCompletionEngine
 {
   public char[] Separators { get; set; } = "abcdefghijklmnopqrstuvwxyz_".ToArray();
 
@@ -8,10 +8,10 @@ class AutoCompletionHandler : IAutoCompleteHandler
   private string _lastPrefix = "";
   private int _tabCount = 0;
 
-  public string[] GetSuggestions(string text, int index)
+  public string? Complete(string text)
   {
     if (string.IsNullOrWhiteSpace(text))
-      return null!;
+      return null;
 
     var matches = _commands
         .Concat(FileExecuter.FindExecutablesAtPath())
@@ -22,15 +22,16 @@ class AutoCompletionHandler : IAutoCompleteHandler
 
     if (matches.Count == 0)
     {
-      _tabCount = 0;
+      Reset();
       Console.Write("\x07");
-      return null!;
+      Console.Out.Flush();
+      return null;
     }
 
     if (matches.Count == 1)
     {
-      _tabCount = 0;
-      return [$"{matches[0][text.Length..]} "];
+      Reset();
+      return $"{matches[0][text.Length..]} ";
     }
 
     if (text == _lastPrefix)
@@ -45,26 +46,24 @@ class AutoCompletionHandler : IAutoCompleteHandler
 
     if (_tabCount == 1)
     {
-      string foundMatchingPrefix = GetLongestCommonPrefix(matches);
-
-      if (foundMatchingPrefix == text)
+      var prefix = GetLongestCommonPrefix(matches);
+      if (prefix == text)
       {
         Console.Write("\x07");
-        return null!;
+        Console.Out.Flush();
+        return null;
       }
 
-      _tabCount = 0;
-      return [$"{foundMatchingPrefix[text.Length..]}"];
+      Reset();
+      return prefix[text.Length..];
     }
-    else
-    {
-      Console.WriteLine();
-      Console.WriteLine(string.Join("  ", matches));
-      Console.Write($"$ {text}");
 
-      _tabCount = 0;
-      return null!;
-    }
+    Console.WriteLine();
+    Console.WriteLine(string.Join("  ", matches));
+    Console.Write($"$ {text}");
+    Console.Out.Flush();
+    Reset();
+    return null;
   }
 
   public void Reset()
@@ -75,22 +74,15 @@ class AutoCompletionHandler : IAutoCompleteHandler
 
   private static string GetLongestCommonPrefix(List<string> matches)
   {
-    if (matches == null || matches.Count == 0)
-      return string.Empty;
+    var prefix = matches[0];
 
-    string prefix = matches[0];
-
-    for (int i = 1; i < matches.Count; i++)
+    foreach (var match in matches.Skip(1))
     {
-      string currentMatch = matches[i];
+      int len = 0;
+      while (len < prefix.Length && len < match.Length && char.ToLowerInvariant(prefix[len]) == char.ToLowerInvariant(match[len]))
+        len++;
 
-      int minLength = Math.Min(prefix.Length, currentMatch.Length);
-      int commonLength = 0;
-
-      while (commonLength < minLength && char.ToLowerInvariant(prefix[commonLength]) == char.ToLowerInvariant(currentMatch[commonLength]))
-        commonLength++;
-
-      prefix = prefix[..commonLength];
+      prefix = prefix[..len];
 
       if (prefix.Length == 0)
         break;

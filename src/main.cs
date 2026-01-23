@@ -4,17 +4,16 @@ using src.Helpers;
 
 class Program
 {
-  private static readonly AutoCompletionHandler _handler = new AutoCompletionHandler();
-
   static async Task Main()
   {
-    ReadLine.AutoCompletionHandler = _handler;
+    var autocomplete = new AutoCompletionEngine();
+    var readline = new ReadLineEngine(autocomplete);
 
     ShellContext? shellContext = null;
 
     while (true)
     {
-      string input = GetCommandFromUser();
+      string input = GetCommandFromUser(readline);
 
       if (input == "")
         continue;
@@ -54,10 +53,9 @@ class Program
     }
   }
 
-  static string GetCommandFromUser()
+  static string GetCommandFromUser(ReadLineEngine readLine)
   {
-    string input = ReadLine.Read("$ ");
-    _handler.Reset();
+    var input = readLine.ReadLine("$ ");
     return input ?? "";
   }
 
