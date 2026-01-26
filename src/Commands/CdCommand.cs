@@ -1,50 +1,67 @@
 using src.Classes;
+using System.IO.Pipes;
 
 namespace src.Commands;
 
 public static class CdCommand
 {
-  public static void Run(ShellContext shellInput)
+  public static Stream Run(ShellContext shellInput, Command command)
   {
-    string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+    var clientHandle = pipeServer.GetClientHandleAsString();
 
-    string[] parts = shellInput.Parameters[0].Split("/");
-
-    if (parts.Length > 1 && parts[^1] == "")
+    _ = Task.Run(async () =>
     {
-      parts = parts[0..^1];
-    }
+      using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
+      using var writer = new StreamWriter(pipeClient);
 
-    string targetWorkingDirectory = shellInput.WorkingDirectory;
+      if (command.Args.Count == 0) return;
 
-    foreach (string part in parts)
-    {
-      switch (part)
+      string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+      string pathArg = command.Args[0];
+
+      // Handle absolute vs relative start
+      string targetWorkingDirectory = pathArg.StartsWith("/")
+              ? ""
+              : shellInput.WorkingDirectory;
+
+      string[] parts = pathArg.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+      // Manual path traversal logic
+      if (pathArg.StartsWith("~"))
       {
-        case "~":
-          targetWorkingDirectory = home;
-          break;
-        case "":
-          targetWorkingDirectory = "";
-          break;
-        case ".":
-          targetWorkingDirectory = shellInput.WorkingDirectory;
-          break;
-        case "..":
-          targetWorkingDirectory = targetWorkingDirectory.Substring(0, targetWorkingDirectory.LastIndexOf('/'));
-          break;
-        default:
-          targetWorkingDirectory += "/" + part;
-          break;
+        targetWorkingDirectory = home;
+        parts = parts.Skip(1).ToArray();
       }
-    }
 
-    if (!Directory.Exists(targetWorkingDirectory))
-    {
-      shellInput.Output = $"cd: {targetWorkingDirectory}: No such file or directory";
-      return;
-    }
-    shellInput.OutputTarget = null;
-    shellInput.WorkingDirectory = targetWorkingDirectory;
+      foreach (string part in parts)
+      {
+        if (part == "..")
+        {
+          int lastIndex = targetWorkingDirectory.LastIndexOf('/');
+          targetWorkingDirectory = lastIndex > 0 ? targetWorkingDirectory[..lastIndex] : "/";
+        }
+        else if (part != ".")
+        {
+          targetWorkingDirectory = targetWorkingDirectory.TrimEnd('/') + "/" + part;
+        }
+      }
+
+      // Validation
+      if (!Directory.Exists(targetWorkingDirectory))
+      {
+        // Errors in shells usually go to Stderr, but for your internal 
+        // stream consistency, we write the error to the stream.
+        await writer.WriteLineAsync($"cd: {pathArg}: No such file or directory");
+      }
+      else
+      {
+        shellInput.WorkingDirectory = targetWorkingDirectory;
+      }
+
+      await writer.FlushAsync();
+    });
+
+    return pipeServer;
   }
 }

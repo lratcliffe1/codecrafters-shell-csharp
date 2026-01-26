@@ -13,9 +13,9 @@ public static class Parcer
   /// Backslash inside single quotes has no effect.
   /// Backslash inside double quotes escapes ", \, $, `, and newline.
   /// </summary>
-  public static List<string> ParceUserInput(string input)
+  public static List<List<string>> ParceUserInput(string input)
   {
-    List<string> output = [];
+    List<string> flatOutput = [];
     var current = new System.Text.StringBuilder();
 
     ParcingContext ctx = new()
@@ -37,7 +37,7 @@ public static class Parcer
       }
       else
       {
-        ParseOutsideOfQuotes(ctx, output, current, c);
+        ParseOutsideOfQuotes(ctx, flatOutput, current, c);
       }
     }
 
@@ -48,7 +48,17 @@ public static class Parcer
     }
 
     if (current.Length > 0)
-      output.Add(current.ToString());
+      flatOutput.Add(current.ToString());
+
+    List<List<string>> output = [[]];
+
+    foreach (var o in flatOutput)
+    {
+      if (o == "|")
+        output.Add([]);
+      else
+        output.Last().Add(o);
+    }
 
     return output;
   }

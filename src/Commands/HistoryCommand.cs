@@ -1,79 +1,102 @@
 using src.Classes;
+using System.IO.Pipes;
 
 namespace src.Commands;
 
 public static class HistoryCommand
 {
-  public static void Run(ShellContext shellContext)
+  public static Stream Run(ShellContext shellContext, Command command)
   {
-    if (shellContext.Parameters.Count == 0)
-      PrintFullHistory(shellContext);
-    else if (shellContext.Parameters.Count == 1 && int.TryParse(shellContext.Parameters[0], out int commandLimit))
-      PrintLimitedHistory(shellContext, commandLimit);
-    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-r")
-      ReadHistoryFromFile(shellContext);
-    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-w")
-      WriteHistoryToFile(shellContext);
-    else if (shellContext.Parameters.Count == 2 && shellContext.Parameters[0] == "-a")
-      AppendHistoryToFile(shellContext);
+    // 1. Create the pipe
+    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+    string clientHandle = pipeServer.GetClientHandleAsString();
+
+    // 2. Start the background producer
+    _ = Task.Run(async () =>
+    {
+      try
+      {
+        // Use 'using' here to ensure local cleanup, but catch closure exceptions
+        using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
+        using var writer = new StreamWriter(pipeClient);
+        writer.AutoFlush = true;
+
+        // Snapshot the history list to avoid 'Collection Modified' errors if user types fast
+        var historySnapshot = shellContext.History.ToList();
+
+        if (command.Args.Count == 0)
+          await PrintFullHistory(historySnapshot, writer);
+        else if (command.Args.Count == 1 && int.TryParse(command.Args[0], out int limit))
+          await PrintLimitedHistory(historySnapshot, limit, writer);
+        else if (command.Args.Count == 2 && command.Args[0] == "-r")
+          ReadHistoryFromFile(shellContext, command.Args[1]);
+        else if (command.Args.Count == 2 && command.Args[0] == "-r")
+          ReadHistoryFromFile(shellContext, command.Args[1]);
+        else if (command.Args.Count == 2 && command.Args[0] == "-w")
+          WriteHistoryToFile(shellContext, command.Args[1]);
+        else if (command.Args.Count == 2 && command.Args[0] == "-a")
+          AppendHistoryToFile(shellContext, command.Args[1]);
+
+        await writer.FlushAsync();
+      }
+      catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException)
+      {
+        // This prevents the EINVAL crash. If the redirection task finishes 
+        // (e.g. history | head -n 1), this task will fail silently as expected.
+      }
+      finally
+      {
+        // Crucial for 2026: Dispose the local handle copy if not already done
+        pipeServer.DisposeLocalCopyOfClientHandle();
+      }
+    });
+
+    return pipeServer;
   }
 
-  private static void PrintFullHistory(ShellContext shellContext)
+  private static async Task PrintFullHistory(List<string> history, StreamWriter writer)
   {
-    int index = 1;
-
-    foreach (var input in shellContext.History)
+    for (int i = 0; i < history.Count; i++)
     {
-      Console.WriteLine($"{index++} {input}");
+      // Fix for alignment issue found earlier
+      await writer.WriteLineAsync($"{i + 1,5}  {history[i]}");
     }
   }
 
-  private static void PrintLimitedHistory(ShellContext shellContext, int limit)
+  private static async Task PrintLimitedHistory(List<string> history, int limit, StreamWriter writer)
   {
-    int count = shellContext.History.Count;
+    int totalCount = history.Count;
+    int skip = Math.Max(0, totalCount - limit);
 
-    int skip = count - limit;
-    int index = 1 + skip;
-
-    foreach (var input in shellContext.History.Skip(skip))
+    // We iterate using the original index to maintain correct numbering
+    for (int i = skip; i < totalCount; i++)
     {
-      Console.WriteLine($"{index++} {input}");
+      // {i + 1, 5}  provides the 5-character right-aligned column
+      // followed by the two spaces expected by the tester.
+      await writer.WriteLineAsync($"{i + 1,5}  {history[i]}");
     }
   }
 
-  private static void ReadHistoryFromFile(ShellContext shellContext)
+  private static void ReadHistoryFromFile(ShellContext shellContext, string path)
   {
-    string fileContent = File.ReadAllText(shellContext.Parameters[1]);
-
-    foreach (var input in fileContent.Split("\n").SkipLast(1))
+    if (!File.Exists(path)) return;
+    var lines = File.ReadAllLines(path);
+    foreach (var line in lines)
     {
-      shellContext.History.Add(input);
+      shellContext.History.Add(line);
     }
   }
 
-  private static void WriteHistoryToFile(ShellContext shellContext)
+  private static void WriteHistoryToFile(ShellContext shellContext, string path)
   {
-    string content = "";
-
-    foreach (var input in shellContext.History)
-    {
-      content += $"{input}\n";
-      shellContext.HistoryAppended++;
-    }
-
-    File.WriteAllText(shellContext.Parameters[1], content);
+    File.WriteAllLines(path, shellContext.History);
+    shellContext.HistoryAppended = shellContext.History.Count;
   }
 
-  private static void AppendHistoryToFile(ShellContext shellContext)
+  private static void AppendHistoryToFile(ShellContext shellContext, string path)
   {
-    string content = "";
-
-    foreach (var input in shellContext.History.Skip(shellContext.HistoryAppended))
-    {
-      content += $"{input}\n";
-    }
-
-    File.AppendAllText(shellContext.Parameters[1], content);
+    var newLines = shellContext.History.Skip(shellContext.HistoryAppended);
+    File.AppendAllLines(path, newLines);
     shellContext.HistoryAppended = shellContext.History.Count;
   }
 }

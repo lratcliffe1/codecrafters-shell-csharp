@@ -14,8 +14,7 @@ class Program
     ShellContext shellContext = new ShellContext()
     {
       RawInput = "",
-      Command = "",
-      Parameters = [],
+      Commands = [],
       WorkingDirectory = Directory.GetCurrentDirectory(),
       History = history,
       HistoryAppended = 0,
@@ -29,39 +28,73 @@ class Program
       if (input == "")
         continue;
 
-      List<string> formattedInput = Parcer.ParceUserInput(input);
+      List<List<string>> formattedInput = Parcer.ParceUserInput(input);
 
-      shellContext = CreateShellContext(input, formattedInput, shellContext);
+      shellContext = ShellContextCreator.CreateShellContext(input, formattedInput, shellContext);
 
       if (shellContext.RawInput == "")
         continue;
 
-      switch (shellContext.Command)
+      bool exit = false;
+
+      foreach (var command in shellContext.Commands)
       {
-        case "exit":
-          ExitCommand.Run(shellContext);
-          return;
-        case "echo":
-          EchoCommand.Run(shellContext);
+        Stream? internalSource = null;
+
+        switch (command.Name)
+        {
+          case "exit":
+            internalSource = ExitCommand.Run(shellContext);
+            break;
+          case "echo":
+            internalSource = EchoCommand.Run(command);
+            break;
+          case "pwd":
+            internalSource = PwdCommand.Run(shellContext);
+            break;
+          case "cd":
+            internalSource = CdCommand.Run(shellContext, command);
+            break;
+          case "type":
+            internalSource = TypeCommand.Run(command);
+            break;
+          case "history":
+            internalSource = HistoryCommand.Run(shellContext, command);
+            break;
+          default:
+            await ExternalCommand.Run(shellContext, command);
+            break;
+        }
+
+        if (internalSource != null)
+        {
+          // Capture the Task object
+          var redirectionTask = ExternalCommand.ApplyRedirection(shellContext, command, internalSource);
+          shellContext.OutputTasks.Add(redirectionTask);
+        }
+
+        if (command.Name == "exit")
+        {
+          exit = true;
           break;
-        case "pwd":
-          PwdCommand.Run(shellContext);
-          break;
-        case "cd":
-          CdCommand.Run(shellContext);
-          break;
-        case "type":
-          TypeCommand.Run(shellContext);
-          break;
-        case "history":
-          HistoryCommand.Run(shellContext);
-          break;
-        default:
-          await ExternalCommand.Run(shellContext);
-          break;
+        }
       }
 
+      // After the foreach loop:
+      if (shellContext.Processes.Any())
+      {
+        await shellContext.Processes.Last().WaitForExitAsync();
+      }
+
+      // THIS is where the magic happens for 2026 shells:
+      // We wait for all background copy tasks to finish printing to the console.
+      await Task.WhenAll(shellContext.OutputTasks);
+
+      // Now it is safe to call OutputResult and restart the loop
       await OutputResult(shellContext);
+
+      if (exit)
+        return;
     }
   }
 
@@ -82,82 +115,26 @@ class Program
     return input ?? "";
   }
 
-  static ShellContext CreateShellContext(string input, List<string> formattedInput, ShellContext previousShellContext)
+  private static async Task OutputResult(ShellContext shellContext)
   {
-    var operators = new[] {
-      (Token: "2>>", IsError: true,  Type: OutputType.Append),
-      (Token: "1>>", IsError: false, Type: OutputType.Append),
-      (Token: ">>",  IsError: false, Type: OutputType.Append),
-      (Token: "2>",  IsError: true,  Type: OutputType.Redirect),
-      (Token: "1>",  IsError: false, Type: OutputType.Redirect),
-      (Token: ">",   IsError: false, Type: OutputType.Redirect)
-    };
-
-    string? errorTarget = null;
-    string? outputTarget = null;
-    OutputType? outputType = null;
-
-    foreach (var (token, isError, type) in operators)
+    // Ensure all process streams are finished
+    foreach (var proc in shellContext.Processes)
     {
-      int index = formattedInput.IndexOf(token);
-      if (index != -1)
-      {
-        outputType = type;
-        string target = formattedInput.Last();
-
-        errorTarget = isError ? target : "Console";
-        outputTarget = isError ? "Console" : target;
-
-        formattedInput = formattedInput[..index];
-        break;
-      }
+      // Drain any remaining redirected output
+      await proc.WaitForExitAsync();
     }
 
-    outputTarget ??= "Console";
+    // Give a small yielding break for any background CopyToAsync tasks 
+    // that are still pushing bits to the console buffer.
+    await Task.Yield();
 
-    return new ShellContext
+    if (shellContext.LastPipeReadStream != null)
     {
-      RawInput = input.ToLower(),
-      Command = formattedInput[0].ToLower(),
-      Parameters = formattedInput[1..],
-      OutputTarget = outputTarget,
-      ErrorTarget = errorTarget,
-      WorkingDirectory = previousShellContext.WorkingDirectory,
-      OutputType = outputType,
-      History = previousShellContext.History.Append(input).ToList(),
-      HistoryAppended = previousShellContext.HistoryAppended,
-      HistoryLoaded = previousShellContext.HistoryLoaded,
-    };
-  }
+      await shellContext.LastPipeReadStream.DisposeAsync();
+      shellContext.LastPipeReadStream = null;
+    }
 
-  static async Task OutputResult(ShellContext shellInput)
-  {
-    if (shellInput.ErrorTarget != null)
-    {
-      switch (shellInput.ErrorTarget)
-      {
-        case "Console":
-          if (!string.IsNullOrEmpty(shellInput.Error))
-            Console.WriteLine(shellInput.Error);
-          break;
-        default:
-          await FileExecuter.WriteToFile(shellInput.ErrorTarget, shellInput.Error, shellInput.OutputType);
-          break;
-      }
-    }
-    if (shellInput.OutputTarget != null)
-    {
-      switch (shellInput.OutputTarget)
-      {
-        case "Console":
-          if (!string.IsNullOrEmpty(shellInput.Output))
-            Console.WriteLine(shellInput.Output);
-          break;
-        default:
-          await FileExecuter.WriteToFile(shellInput.OutputTarget, shellInput.Output, shellInput.OutputType);
-          break;
-      }
-    }
+    shellContext.Processes.Clear();
   }
 }
 
