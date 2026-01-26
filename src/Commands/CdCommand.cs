@@ -1,67 +1,32 @@
 using src.Classes;
-using System.IO.Pipes;
 
 namespace src.Commands;
 
 public static class CdCommand
 {
-  public static Stream Run(ShellContext shellInput, Command command)
-  {
-    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
-    var clientHandle = pipeServer.GetClientHandleAsString();
-
-    _ = Task.Run(async () =>
-    {
-      using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
-      using var writer = new StreamWriter(pipeClient);
-
-      if (command.Args.Count == 0) return;
-
-      string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
-      string pathArg = command.Args[0];
-
-      // Handle absolute vs relative start
-      string targetWorkingDirectory = pathArg.StartsWith("/")
-              ? ""
-              : shellInput.WorkingDirectory;
-
-      string[] parts = pathArg.Split('/', StringSplitOptions.RemoveEmptyEntries);
-
-      // Manual path traversal logic
-      if (pathArg.StartsWith("~"))
+  public static Stream Run(ShellContext shellInput, Command command) =>
+      InternalCommand.CreateStream(async (writer) =>
       {
-        targetWorkingDirectory = home;
-        parts = parts.Skip(1).ToArray();
-      }
+        if (command.Args.Count == 0) return;
 
-      foreach (string part in parts)
-      {
-        if (part == "..")
+        string home = Environment.GetEnvironmentVariable("HOME") ?? string.Empty;
+        string pathArg = command.Args[0];
+        string target = pathArg.StartsWith("/") ? "" : shellInput.WorkingDirectory;
+
+        if (pathArg.StartsWith("~")) { target = home; pathArg = pathArg[1..]; }
+
+        var parts = pathArg.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
         {
-          int lastIndex = targetWorkingDirectory.LastIndexOf('/');
-          targetWorkingDirectory = lastIndex > 0 ? targetWorkingDirectory[..lastIndex] : "/";
+          if (part == "..") target = target.Contains('/') ? target[..target.LastIndexOf('/')] : "/";
+          else if (part != ".") target = target.TrimEnd('/') + "/" + part;
         }
-        else if (part != ".")
-        {
-          targetWorkingDirectory = targetWorkingDirectory.TrimEnd('/') + "/" + part;
-        }
-      }
 
-      // Validation
-      if (!Directory.Exists(targetWorkingDirectory))
-      {
-        // Errors in shells usually go to Stderr, but for your internal 
-        // stream consistency, we write the error to the stream.
-        await writer.WriteLineAsync($"cd: {pathArg}: No such file or directory");
-      }
-      else
-      {
-        shellInput.WorkingDirectory = targetWorkingDirectory;
-      }
+        if (target == "") target = "/";
 
-      await writer.FlushAsync();
-    });
-
-    return pipeServer;
-  }
+        if (!Directory.Exists(target))
+          await writer.WriteLineAsync($"cd: {command.Args[0]}: No such file or directory");
+        else
+          shellInput.WorkingDirectory = target;
+      });
 }

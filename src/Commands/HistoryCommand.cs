@@ -5,23 +5,10 @@ namespace src.Commands;
 
 public static class HistoryCommand
 {
-  public static Stream Run(ShellContext shellContext, Command command)
-  {
-    // 1. Create the pipe
-    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
-    string clientHandle = pipeServer.GetClientHandleAsString();
-
-    // 2. Start the background producer
-    _ = Task.Run(async () =>
-    {
-      try
+  public static Stream Run(ShellContext shellContext, Command command) =>
+      InternalCommand.CreateStream(async (writer) =>
       {
-        // Use 'using' here to ensure local cleanup, but catch closure exceptions
-        using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
-        using var writer = new StreamWriter(pipeClient);
-        writer.AutoFlush = true;
-
-        // Snapshot the history list to avoid 'Collection Modified' errors if user types fast
+        // SNAPSHOT: Prevents "Collection Modified" exceptions
         var historySnapshot = shellContext.History.ToList();
 
         if (command.Args.Count == 0)
@@ -30,29 +17,11 @@ public static class HistoryCommand
           await PrintLimitedHistory(historySnapshot, limit, writer);
         else if (command.Args.Count == 2 && command.Args[0] == "-r")
           ReadHistoryFromFile(shellContext, command.Args[1]);
-        else if (command.Args.Count == 2 && command.Args[0] == "-r")
-          ReadHistoryFromFile(shellContext, command.Args[1]);
         else if (command.Args.Count == 2 && command.Args[0] == "-w")
           WriteHistoryToFile(shellContext, command.Args[1]);
         else if (command.Args.Count == 2 && command.Args[0] == "-a")
           AppendHistoryToFile(shellContext, command.Args[1]);
-
-        await writer.FlushAsync();
-      }
-      catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException)
-      {
-        // This prevents the EINVAL crash. If the redirection task finishes 
-        // (e.g. history | head -n 1), this task will fail silently as expected.
-      }
-      finally
-      {
-        // Crucial for 2026: Dispose the local handle copy if not already done
-        pipeServer.DisposeLocalCopyOfClientHandle();
-      }
-    });
-
-    return pipeServer;
-  }
+      });
 
   private static async Task PrintFullHistory(List<string> history, StreamWriter writer)
   {

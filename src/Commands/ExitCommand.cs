@@ -7,38 +7,25 @@ public static class ExitCommand
 {
   public static Stream Run(ShellContext shellContext)
   {
-    // 1. Perform the "Exit" cleanup logic (Saving History)
+    // 1. Perform cleanup logic immediately
     SaveHistory(shellContext);
 
-    // 2. Create an empty pipe to satisfy the pipeline architecture
-    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
-    var clientHandle = pipeServer.GetClientHandleAsString();
-
-    _ = Task.Run(() =>
+    // 2. Return an empty stream via the wrapper
+    return InternalCommand.CreateStream(async (writer) =>
     {
-      // Simply close the client side immediately as exit produces no output
-      using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
+      // Exit produces no output to stdout, so we do nothing here.
+      // The wrapper handles opening and closing the pipe correctly.
+      await Task.CompletedTask;
     });
-
-    return pipeServer;
   }
 
   private static void SaveHistory(ShellContext shellContext)
   {
     var historyFilePath = Environment.GetEnvironmentVariable("HISTFILE");
-    if (string.IsNullOrEmpty(historyFilePath))
-      return;
+    if (string.IsNullOrEmpty(historyFilePath)) return;
 
-    // Use AppendAllLines for better memory management and performance in 2026
     var newHistoryItems = shellContext.History.Skip(shellContext.HistoryLoaded);
-
-    try
-    {
-      File.AppendAllLines(historyFilePath, newHistoryItems);
-    }
-    catch (IOException)
-    {
-      // Standard shell behavior: fail silently or log to stderr if history cannot be saved
-    }
+    try { File.AppendAllLines(historyFilePath, newHistoryItems); }
+    catch (IOException) { }
   }
 }
