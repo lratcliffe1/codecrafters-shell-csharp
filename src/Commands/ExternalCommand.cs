@@ -18,31 +18,26 @@ public class ExternalCommand
     };
 
     foreach (var arg in command.Args)
-    {
       proc.StartInfo.ArgumentList.Add(arg);
-    }
 
     try
     {
       proc.Start();
       shellInput.Processes.Add(proc);
 
-      // LINK INPUT: Pull from previous pipe
+      // If we have a pipeline read-stream from the previous command, feed it into stdin.
       if (shellInput.LastPipeReadStream != null)
       {
-        _ = CopyStreamAsync(shellInput.LastPipeReadStream, proc.StandardInput.BaseStream);
+        shellInput.OutputTasks.Add(PumpToProcessStdinAsync(shellInput.LastPipeReadStream, proc));
+        shellInput.LastPipeReadStream = null;
       }
 
-      // Apply redirection logic if start is successful
-      var outputTask = ApplyRedirection(shellInput, command, proc.StandardOutput.BaseStream, proc.StandardError.BaseStream);
-      shellInput.OutputTasks.Add(outputTask);
+      await ApplyRedirection(shellInput, command, proc.StandardOutput.BaseStream, proc.StandardError.BaseStream);
     }
     catch (System.ComponentModel.Win32Exception)
     {
-      // This is the specific fix for the tester's expected output
       Console.WriteLine($"{command.Name}: command not found");
 
-      // Drain any existing pipe to prevent the next command from hanging
       if (shellInput.LastPipeReadStream != null)
       {
         await shellInput.LastPipeReadStream.DisposeAsync();
@@ -51,69 +46,92 @@ public class ExternalCommand
     }
   }
 
-  public static async Task ApplyRedirection(ShellContext shellInput, Command command, Stream stdoutSource, Stream? stderrSource = null)
+  public static async Task ApplyRedirection(
+    ShellContext shellInput,
+    Command command,
+    Stream stdoutSource,
+    Stream? stderrSource = null)
   {
-    // FIX: Internal commands should use Stream.Null (readable but empty) 
-    // instead of the Write-Only Console.Error stream.
     stderrSource ??= Stream.Null;
 
-    // --- 1. HANDLE STDOUT ---
+    bool isLastCommand = ReferenceEquals(command, shellInput.Commands[^1]);
+
+    // --- STDOUT ---
     if (command.StdoutTarget != "Console")
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
       var fileStream = new FileStream(command.StdoutTarget, mode, FileAccess.Write, FileShare.Read);
-      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, fileStream));
+      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, fileStream, leaveDestinationOpen: false));
     }
-    else if (shellInput.Commands.Last().Index != command.Index)
+    else if (!isLastCommand)
     {
-      var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
-      shellInput.LastPipeReadStream = pipeServer;
-      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, pipeServer));
+      // Pipe stdout to the next command by passing the stream directly.
+      shellInput.LastPipeReadStream = stdoutSource;
     }
     else
     {
-      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, Console.OpenStandardOutput()));
+      // Last command prints to console (DO NOT close console stream)
+      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, Console.OpenStandardOutput(), leaveDestinationOpen: true));
     }
 
-    // --- 2. HANDLE STDERR ---
+    // --- STDERR ---
     if (command.SterrTarget != null && command.SterrTarget != "Console")
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
       var fileStream = new FileStream(command.SterrTarget, mode, FileAccess.Write, FileShare.Read);
-      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, fileStream));
+      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, fileStream, leaveDestinationOpen: false));
     }
     else
     {
-      // For external commands, this is the actual proc.StandardError.
-      // For internal commands, this is now Stream.Null, which won't crash.
-      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, Console.OpenStandardError()));
+      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, Console.OpenStandardError(), leaveDestinationOpen: true));
     }
+
+    await Task.CompletedTask;
   }
 
-  private static async Task CopyStreamAsync(Stream source, Stream destination)
+  private static async Task CopyStreamAsync(Stream source, Stream destination, bool leaveDestinationOpen)
   {
     try
     {
-      // Copy the data
       await source.CopyToAsync(destination);
       await destination.FlushAsync();
+
+      if (destination is AnonymousPipeServerStream pipeServer && OperatingSystem.IsWindows())
+        pipeServer.WaitForPipeDrain();
     }
-    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException)
+    catch (IOException)
     {
-      // Standard shell behavior: If a pipe is closed early (e.g., 'head' finishes)
-      // we just stop copying instead of crashing.
+      // Broken pipe is normal for commands like `head`
     }
     finally
     {
-      // 1. Always dispose the source (it's a process stdout or internal pipe)
       await source.DisposeAsync();
 
-      // 2. ONLY dispose destination if it's a File or an Anonymous Pipe.
-      // NEVER dispose Console.OpenStandardOutput() or Error.
-      if (destination is FileStream || destination is AnonymousPipeServerStream || destination is AnonymousPipeClientStream)
+      if (!leaveDestinationOpen)
       {
-        await destination.DisposeAsync();
+        if (destination is FileStream || destination is PipeStream)
+          await destination.DisposeAsync();
+        else
+          destination.Dispose();
       }
+    }
+  }
+
+  private static async Task PumpToProcessStdinAsync(Stream source, Process proc)
+  {
+    try
+    {
+      await source.CopyToAsync(proc.StandardInput.BaseStream);
+      await proc.StandardInput.FlushAsync();
+    }
+    catch (IOException)
+    {
+      // Consumer may exit early
+    }
+    finally
+    {
+      await source.DisposeAsync();
+      try { proc.StandardInput.Close(); } catch { }
     }
   }
 }
