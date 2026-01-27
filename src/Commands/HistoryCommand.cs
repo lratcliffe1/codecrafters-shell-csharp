@@ -37,14 +37,15 @@ public static class HistoryCommand
 
     for (int i = skip; i < totalCount; i++)
     {
-      // {i + 1, 5}  provides the 5-character right-aligned column
-      await writer.WriteLineAsync($"{i + 1,5}  {history[i]}");
+      await writer.WriteLineAsync($"{i + 1,5}  {history[i]}"); // {i + 1, 5}  provides the 5-character right-aligned column
     }
   }
 
   private static void ReadHistoryFromFile(ShellContext shellContext, string path)
   {
-    if (!File.Exists(path)) return;
+    if (!File.Exists(path))
+      return;
+
     var lines = File.ReadAllLines(path);
     foreach (var line in lines)
     {

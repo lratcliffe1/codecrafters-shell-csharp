@@ -6,10 +6,10 @@ class Program
 {
   static async Task Main()
   {
-    var autocomplete = new AutoCompletionEngine();
-    var readline = new ReadLineEngine(autocomplete);
-
     var history = LoadHistoryFromHistFile();
+
+    var autocomplete = new AutoCompletionEngine();
+    var readline = new ReadLineEngine(autocomplete, history);
 
     ShellContext shellContext = new()
     {
@@ -95,7 +95,8 @@ class Program
 
   static List<string> LoadHistoryFromHistFile()
   {
-    var historyFilePath = Environment.GetEnvironmentVariable("HISTFILE");
+    string historyFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
+
     if (string.IsNullOrEmpty(historyFilePath))
       return [];
 

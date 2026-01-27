@@ -12,7 +12,9 @@ public static class TypeCommand
       {
         string param = command.Args.Count > 0 ? command.Args[0] : string.Empty;
         if (builtInCommands.Contains(param))
+        {
           await writer.WriteLineAsync($"{param} is a shell builtin");
+        }
         else
         {
           string? path = FileExecuter.FindExecutablePath(param);

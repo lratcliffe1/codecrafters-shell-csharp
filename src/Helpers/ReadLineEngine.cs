@@ -8,8 +8,9 @@ public sealed class ReadLineEngine
   private readonly List<string> _history = [];
   private int _historyIndex;
 
-  public ReadLineEngine(AutoCompletionEngine autocomplete)
+  public ReadLineEngine(AutoCompletionEngine autocomplete, List<string> history)
   {
+    _history = history;
     _autocomplete = autocomplete;
     _historyIndex = 0;
   }

@@ -13,16 +13,23 @@ public static class CdCommand
         string pathArg = command.Args[0];
         string target = pathArg.StartsWith("/") ? "" : shellInput.WorkingDirectory;
 
-        if (pathArg.StartsWith("~")) { target = home; pathArg = pathArg[1..]; }
+        if (pathArg.StartsWith("~"))
+        {
+          target = home;
+          pathArg = pathArg[1..];
+        }
 
         var parts = pathArg.Split('/', StringSplitOptions.RemoveEmptyEntries);
         foreach (var part in parts)
         {
-          if (part == "..") target = target.Contains('/') ? target[..target.LastIndexOf('/')] : "/";
-          else if (part != ".") target = target.TrimEnd('/') + "/" + part;
+          if (part == "..")
+            target = target.Contains('/') ? target[..target.LastIndexOf('/')] : "/";
+          else if (part != ".")
+            target = target.TrimEnd('/') + "/" + part;
         }
 
-        if (target == "") target = "/";
+        if (target == "")
+          target = "/";
 
         if (!Directory.Exists(target))
           await writer.WriteLineAsync($"cd: {command.Args[0]}: No such file or directory");
