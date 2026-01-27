@@ -21,7 +21,7 @@ public static class ShellContextCreator
       Commands = [],
       WorkingDirectory = previousShellContext.WorkingDirectory,
       History = previousShellContext.History.Append(input).ToList(),
-      HistoryAppended = previousShellContext.HistoryAppended + 1,
+      HistoryAppended = previousShellContext.HistoryAppended,
       HistoryLoaded = previousShellContext.HistoryLoaded,
     };
 

@@ -16,8 +16,11 @@ public static class ExitCommand
 
   private static void SaveHistory(ShellContext shellContext)
   {
-    string historyFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
-    if (string.IsNullOrEmpty(historyFilePath)) return;
+    string historyFilePath = Environment.GetEnvironmentVariable("HISTFILE")
+      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
+
+    if (string.IsNullOrEmpty(historyFilePath))
+      return;
 
     var newHistoryItems = shellContext.History.Skip(shellContext.HistoryLoaded);
     try { File.AppendAllLines(historyFilePath, newHistoryItems); }

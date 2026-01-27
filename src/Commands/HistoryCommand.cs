@@ -1,5 +1,4 @@
 using src.Classes;
-using System.IO.Pipes;
 
 namespace src.Commands;
 
@@ -47,10 +46,7 @@ public static class HistoryCommand
       return;
 
     var lines = File.ReadAllLines(path);
-    foreach (var line in lines)
-    {
-      shellContext.History.Add(line);
-    }
+    shellContext.History.AddRange(lines);
   }
 
   private static void WriteHistoryToFile(ShellContext shellContext, string path)
@@ -61,7 +57,7 @@ public static class HistoryCommand
 
   private static void AppendHistoryToFile(ShellContext shellContext, string path)
   {
-    var newLines = shellContext.History.Skip(shellContext.HistoryAppended);
+    var newLines = shellContext.History.Skip(shellContext.HistoryAppended).ToList();
     File.AppendAllLines(path, newLines);
     shellContext.HistoryAppended = shellContext.History.Count;
   }

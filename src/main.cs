@@ -9,7 +9,7 @@ class Program
     var history = LoadHistoryFromHistFile();
 
     var autocomplete = new AutoCompletionEngine();
-    var readline = new ReadLineEngine(autocomplete, history);
+    var readline = new ReadLineEngine(autocomplete, history.ToList());
 
     ShellContext shellContext = new()
     {
@@ -17,7 +17,7 @@ class Program
       Commands = [],
       WorkingDirectory = Directory.GetCurrentDirectory(),
       History = history,
-      HistoryAppended = 0,
+      HistoryAppended = history.Count,
       HistoryLoaded = history.Count,
     };
 
@@ -95,14 +95,15 @@ class Program
 
   static List<string> LoadHistoryFromHistFile()
   {
-    string historyFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
+    string historyFilePath = Environment.GetEnvironmentVariable("HISTFILE")
+      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
 
-    if (string.IsNullOrEmpty(historyFilePath))
+    if (!File.Exists(historyFilePath))
       return [];
 
-    string fileContent = File.ReadAllText(historyFilePath);
+    string[] fileContent = File.ReadAllLines(historyFilePath);
 
-    return fileContent.Split("\n").SkipLast(1).ToList();
+    return fileContent.ToList();
   }
 
   static string GetCommandFromUser(ReadLineEngine readLine)
