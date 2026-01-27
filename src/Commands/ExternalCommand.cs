@@ -55,7 +55,6 @@ public class ExternalCommand
     stderrSource ??= Stream.Null;
 
     bool isLastCommand = ReferenceEquals(command, shellInput.Commands[^1]);
-
     // --- STDOUT ---
     if (command.StdoutTarget != "Console")
     {
@@ -121,7 +120,22 @@ public class ExternalCommand
   {
     try
     {
-      await source.CopyToAsync(proc.StandardInput.BaseStream);
+      var buffer = new byte[8192];
+      long totalBytes = 0;
+
+      while (true)
+      {
+        int read = await source.ReadAsync(buffer);
+        if (read == 0)
+        {
+          break;
+        }
+
+        totalBytes += read;
+
+        await proc.StandardInput.BaseStream.WriteAsync(buffer.AsMemory(0, read));
+      }
+
       await proc.StandardInput.FlushAsync();
     }
     catch (IOException)

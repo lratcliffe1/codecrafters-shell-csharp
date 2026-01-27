@@ -10,15 +10,18 @@ public static class InternalCommand
   /// </summary>
   public static Stream CreateStream(Func<StreamWriter, Task> logic)
   {
-    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+    var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.None);
     string clientHandle = pipeServer.GetClientHandleAsString();
 
     _ = Task.Run(async () =>
     {
+      AnonymousPipeClientStream? pipeClient = null;
+      StreamWriter? writer = null;
+
       try
       {
-        using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
-        using var writer = new StreamWriter(pipeClient);
+        pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
+        writer = new StreamWriter(pipeClient);
         writer.AutoFlush = true;
 
         await logic(writer);
@@ -30,6 +33,12 @@ public static class InternalCommand
       }
       finally
       {
+        if (writer != null)
+          await writer.DisposeAsync();
+
+        if (pipeClient != null)
+          await pipeClient.DisposeAsync();
+
         // CRITICAL: Prevent EINVAL by disposing handle local copy
         pipeServer.DisposeLocalCopyOfClientHandle();
       }
