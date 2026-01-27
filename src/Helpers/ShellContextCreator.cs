@@ -52,7 +52,6 @@ public static class ShellContextCreator
       {
         Name = formattedInput.First(),
         Args = formattedInput.Skip(1).ToList(),
-        Index = i,
         StdoutTarget = stdoutTarget,
         SterrTarget = sterrTarget,
         OutputType = outputType,

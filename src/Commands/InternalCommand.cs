@@ -4,10 +4,6 @@ namespace src.Commands;
 
 public static class InternalCommand
 {
-  /// <summary>
-  /// Wraps internal logic in a 2026-compliant Anonymous Pipe stream.
-  /// Handles broken pipes, handle disposal, and prevents EINVAL crashes.
-  /// </summary>
   public static Stream CreateStream(Func<StreamWriter, Task> logic)
   {
     var pipeServer = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.None);
@@ -39,7 +35,6 @@ public static class InternalCommand
         if (pipeClient != null)
           await pipeClient.DisposeAsync();
 
-        // CRITICAL: Prevent EINVAL by disposing handle local copy
         pipeServer.DisposeLocalCopyOfClientHandle();
       }
     });

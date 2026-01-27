@@ -1,4 +1,5 @@
 using src.Classes;
+using src.Helpers;
 
 namespace src.Commands;
 
@@ -14,7 +15,7 @@ public static class TypeCommand
           await writer.WriteLineAsync($"{param} is a shell builtin");
         else
         {
-          string? path = Helpers.FileExecuter.FindExecutablePath(param);
+          string? path = FileExecuter.FindExecutablePath(param);
           await writer.WriteLineAsync(path != null ? $"{param} is {path}" : $"{param}: not found");
         }
       });

@@ -20,7 +20,6 @@ public class Command
 {
     public required string Name { get; set; }
     public required List<string> Args { get; set; }
-    public required int Index { get; set; }
     public required string StdoutTarget { get; set; }
     public string? SterrTarget { get; set; }
     public required OutputType OutputType { get; set; }

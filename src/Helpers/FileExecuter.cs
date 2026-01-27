@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using src.Classes;
 
 namespace src.Helpers;
 
@@ -22,26 +21,6 @@ public static class FileExecuter
       .OfType<string>()
       .Distinct()
       .ToArray();
-  }
-
-  public static async Task WriteToFile(string path, string? contents, OutputType? outputType)
-  {
-    string? directoryPath = Path.GetDirectoryName(path);
-
-    if (!string.IsNullOrEmpty(directoryPath))
-      Directory.CreateDirectory(directoryPath);
-
-    if (outputType == OutputType.Redirect)
-      await File.WriteAllTextAsync(path, contents);
-    else if (outputType == OutputType.Append)
-    {
-      bool hasContent = File.Exists(path) && new FileInfo(path).Length > 0;
-
-      if (hasContent)
-        await File.AppendAllTextAsync(path, Environment.NewLine + contents);
-      else
-        await File.AppendAllTextAsync(path, contents);
-    }
   }
 
   private static IEnumerable<string> GetPathSegments(string? customPath = null)

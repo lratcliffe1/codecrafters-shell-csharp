@@ -11,7 +11,7 @@ class Program
 
     var history = LoadHistoryFromHistFile();
 
-    ShellContext shellContext = new ShellContext()
+    ShellContext shellContext = new()
     {
       RawInput = "",
       Commands = [],
@@ -68,7 +68,6 @@ class Program
 
         if (internalSource != null)
         {
-          // Capture the Task object
           var redirectionTask = ExternalCommand.ApplyRedirection(shellContext, command, internalSource);
           shellContext.OutputTasks.Add(redirectionTask);
         }
@@ -80,17 +79,13 @@ class Program
         }
       }
 
-      // After the foreach loop:
       if (shellContext.Processes.Any())
       {
         await shellContext.Processes.Last().WaitForExitAsync();
       }
 
-      // THIS is where the magic happens for 2026 shells:
-      // We wait for all background copy tasks to finish printing to the console.
       await Task.WhenAll(shellContext.OutputTasks);
 
-      // Now it is safe to call OutputResult and restart the loop
       await OutputResult(shellContext);
 
       if (exit)
@@ -117,15 +112,11 @@ class Program
 
   private static async Task OutputResult(ShellContext shellContext)
   {
-    // Ensure all process streams are finished
     foreach (var proc in shellContext.Processes)
     {
-      // Drain any remaining redirected output
       await proc.WaitForExitAsync();
     }
 
-    // Give a small yielding break for any background CopyToAsync tasks 
-    // that are still pushing bits to the console buffer.
     await Task.Yield();
 
     if (shellContext.LastPipeReadStream != null)

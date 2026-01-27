@@ -6,7 +6,7 @@ public sealed class ReadLineEngine
 {
   private readonly AutoCompletionEngine _autocomplete;
   private readonly List<string> _history = [];
-  private int _historyIndex; // points to "current" slot; _history.Count == blank line after last
+  private int _historyIndex;
 
   public ReadLineEngine(AutoCompletionEngine autocomplete)
   {
@@ -165,13 +165,11 @@ public static class KeyReader
       };
     }
 
-    // Redirected input (tester): read chars and parse ANSI escape sequences.
     int ch = Console.In.Read();
     if (ch == -1) return new KeyPress(KeyKind.Unknown);
 
     char c = (char)ch;
 
-    // Some harnesses send \n only; some send \r\n
     if (c == '\n') return new KeyPress(KeyKind.Enter);
     if (c == '\r')
     {
@@ -181,10 +179,8 @@ public static class KeyReader
 
     if (c == '\t') return new KeyPress(KeyKind.Tab);
 
-    // Backspace can be '\b' or DEL (127)
     if (c == '\b' || c == (char)127) return new KeyPress(KeyKind.Backspace);
 
-    // ANSI arrow keys: ESC [ A/B/C/D
     if (c == '\x1b') // ESC
     {
       if (Console.In.Peek() == '[')

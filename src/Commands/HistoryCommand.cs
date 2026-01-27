@@ -8,7 +8,6 @@ public static class HistoryCommand
   public static Stream Run(ShellContext shellContext, Command command) =>
       InternalCommand.CreateStream(async (writer) =>
       {
-        // SNAPSHOT: Prevents "Collection Modified" exceptions
         var historySnapshot = shellContext.History.ToList();
 
         if (command.Args.Count == 0)
@@ -27,7 +26,6 @@ public static class HistoryCommand
   {
     for (int i = 0; i < history.Count; i++)
     {
-      // Fix for alignment issue found earlier
       await writer.WriteLineAsync($"{i + 1,5}  {history[i]}");
     }
   }
@@ -37,11 +35,9 @@ public static class HistoryCommand
     int totalCount = history.Count;
     int skip = Math.Max(0, totalCount - limit);
 
-    // We iterate using the original index to maintain correct numbering
     for (int i = skip; i < totalCount; i++)
     {
       // {i + 1, 5}  provides the 5-character right-aligned column
-      // followed by the two spaces expected by the tester.
       await writer.WriteLineAsync($"{i + 1,5}  {history[i]}");
     }
   }

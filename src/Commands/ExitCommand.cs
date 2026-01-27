@@ -7,14 +7,10 @@ public static class ExitCommand
 {
   public static Stream Run(ShellContext shellContext)
   {
-    // 1. Perform cleanup logic immediately
     SaveHistory(shellContext);
 
-    // 2. Return an empty stream via the wrapper
     return InternalCommand.CreateStream(async (writer) =>
     {
-      // Exit produces no output to stdout, so we do nothing here.
-      // The wrapper handles opening and closing the pipe correctly.
       await Task.CompletedTask;
     });
   }

@@ -55,7 +55,7 @@ public class ExternalCommand
     stderrSource ??= Stream.Null;
 
     bool isLastCommand = ReferenceEquals(command, shellInput.Commands[^1]);
-    // --- STDOUT ---
+    // STDOUT
     if (command.StdoutTarget != "Console")
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
@@ -73,7 +73,7 @@ public class ExternalCommand
       shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, Console.OpenStandardOutput(), leaveDestinationOpen: true));
     }
 
-    // --- STDERR ---
+    // STDERR
     if (command.SterrTarget != null && command.SterrTarget != "Console")
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
