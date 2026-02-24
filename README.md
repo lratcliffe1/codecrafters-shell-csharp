@@ -1,34 +1,79 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/a28d07aa-920e-4a9d-8f32-bc2d2ff61518)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+# C# Unix-like Shell
 
-This is a starting point for C# solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+This repository contains my solution to the
+["Build Your Own Shell" challenge](https://app.codecrafters.io/courses/shell/overview).
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+Built a Unix-like shell with composable internal and external commands, history,
+and autocompletion.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+Modelled command I/O as streams to support redirection, pipelines, and
+asynchronous composition.
 
-# Passing the first stage
+## What I have done
 
-The entry point for your `shell` implementation is in `src/main.cs`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+- Implemented a REPL shell loop in [`src/main.cs`](src/main.cs) that:
+  - reads interactive input,
+  - parses commands and pipelines,
+  - executes builtins and external programs,
+  - supports async output handling and process waiting.
+- Added builtin commands:
+  - `exit`, `echo`, `pwd`, `cd`, `type`, `history`.
+- Added external command execution using `ProcessStartInfo` with redirected
+  `stdin`, `stdout`, and `stderr`.
+- Implemented redirection support:
+  - stdout: `>`, `1>`, `>>`, `1>>`
+  - stderr: `2>`, `2>>`
+- Implemented pipeline support (`|`) by passing stream output from one command
+  into the next command's stdin.
+- Built parser logic for shell-like tokenization with:
+  - single quote handling,
+  - double quote handling,
+  - backslash escaping rules.
+- Added interactive line editing via a custom readline engine:
+  - character input/backspace,
+  - arrow-key history navigation,
+  - tab completion.
+- Built autocompletion that supports:
+  - command + PATH executable completion for first token,
+  - file/directory completion for path tokens,
+  - longest-common-prefix completion,
+  - double-tab candidate listing.
+- Added history features:
+  - load on startup (`HISTFILE` or `~/.bash_history`),
+  - append on exit,
+  - `history`, `history N`, `history -r`, `history -w`, `history -a`.
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
+## Architecture choices
 
-Time to move on to the next stage!
+- Used a `ShellContext` object to carry state (`working directory`, `history`,
+  `running processes`, and pipeline streams) through each command cycle.
+- Normalized internal command output into streams (via
+  `InternalCommand.CreateStream`) so builtin and external commands can be
+  composed with the same redirection/pipeline flow.
+- Used async stream copy tasks to avoid blocking and to handle multi-process
+  output safely.
+- Added defensive handling for common shell edge-cases like broken pipes and
+  unknown commands.
 
-# Stage 2 & beyond
+## What I have learnt
 
-Note: This section is for stages 2 and beyond.
+- Stream-first design makes shell composition much simpler:
+  if every command exposes output as a stream, redirection and pipelines become
+  wiring problems instead of special-case logic.
+- Process orchestration is mostly about lifecycle management:
+  closing stdin at the right time, waiting for exit, and cleaning up streams is
+  critical to avoid hangs.
+- Shell parsing is deceptively tricky:
+  quote/escape behavior needs an explicit state machine to stay predictable.
+- Supporting `stderr` separately from `stdout` is essential for correct shell
+  semantics and realistic command behavior.
+- UX features (history navigation + autocomplete) significantly improve
+  usability but require careful terminal redraw and key handling.
+- Stateful features like history persistence are easier to reason about when
+  tracked with explicit counters (`HistoryLoaded`, `HistoryAppended`) rather
+  than inferred from file size or timestamps.
 
-1. Ensure you have `dotnet (9.0)` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.cs`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+## Run locally
+
+1. Ensure `.NET 9` is installed.
+1. Run `./your_program.sh`.
