@@ -14,7 +14,6 @@ public class ShellContext
     public List<Process> Processes { get; set; } = [];
     public List<Task> OutputTasks { get; set; } = [];
     public List<BackgroundJob> BackgroundJobs { get; set; } = [];
-    public int NextJobNumber { get; set; } = 1;
 
 }
 

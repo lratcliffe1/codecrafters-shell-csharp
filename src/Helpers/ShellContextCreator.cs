@@ -24,7 +24,6 @@ public static class ShellContextCreator
       HistoryAppended = previousShellContext.HistoryAppended,
       HistoryLoaded = previousShellContext.HistoryLoaded,
       BackgroundJobs = previousShellContext.BackgroundJobs,
-      NextJobNumber = previousShellContext.NextJobNumber,
     };
 
     for (var i = 0; i < formattedInputList.Count; i++)
@@ -40,7 +39,7 @@ public static class ShellContextCreator
       {
         isBackground = true;
         formattedInput = formattedInput[..^1];
-        jobNumber = shellContext.NextJobNumber++;
+        jobNumber = GetSmallestAvailableJobNumber(shellContext.BackgroundJobs);
       }
 
       if (formattedInput.Count == 0)
@@ -83,4 +82,16 @@ public static class ShellContextCreator
     return shellContext;
   }
 
+  private static int GetSmallestAvailableJobNumber(List<BackgroundJob> jobs)
+  {
+    var usedNumbers = jobs
+      .Select(job => job.JobNumber)
+      .ToHashSet();
+
+    int next = 1;
+    while (usedNumbers.Contains(next))
+      next++;
+
+    return next;
+  }
 }
