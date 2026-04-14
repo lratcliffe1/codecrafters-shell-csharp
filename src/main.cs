@@ -19,6 +19,7 @@ class Program
       History = history,
       HistoryAppended = history.Count,
       HistoryLoaded = history.Count,
+      NextJobNumber = 1,
     };
 
     while (true)

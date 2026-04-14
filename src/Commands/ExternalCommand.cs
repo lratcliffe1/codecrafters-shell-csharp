@@ -23,12 +23,21 @@ public class ExternalCommand
     try
     {
       proc.Start();
-      shellInput.Processes.Add(proc);
+      if (command.IsBackground)
+      {
+        shellInput.BackgroundProcesses.Add(proc);
+        if (command.JobNumber != null)
+          Console.WriteLine($"[{command.JobNumber}] {proc.Id}");
+      }
+      else
+      {
+        shellInput.Processes.Add(proc);
+      }
 
       // If we have a pipeline read-stream from the previous command, feed it into stdin.
       if (shellInput.LastPipeReadStream != null)
       {
-        shellInput.OutputTasks.Add(PumpToProcessStdinAsync(shellInput.LastPipeReadStream, proc));
+        RegisterOutputTask(shellInput, command, PumpToProcessStdinAsync(shellInput.LastPipeReadStream, proc));
         shellInput.LastPipeReadStream = null;
       }
 
@@ -60,7 +69,7 @@ public class ExternalCommand
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
       var fileStream = new FileStream(command.StdoutTarget, mode, FileAccess.Write, FileShare.Read);
-      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, fileStream, leaveDestinationOpen: false));
+      RegisterOutputTask(shellInput, command, CopyStreamAsync(stdoutSource, fileStream, leaveDestinationOpen: false));
     }
     else if (!isLastCommand)
     {
@@ -70,7 +79,7 @@ public class ExternalCommand
     else
     {
       // Last command prints to console (DO NOT close console stream)
-      shellInput.OutputTasks.Add(CopyStreamAsync(stdoutSource, Console.OpenStandardOutput(), leaveDestinationOpen: true));
+      RegisterOutputTask(shellInput, command, CopyStreamAsync(stdoutSource, Console.OpenStandardOutput(), leaveDestinationOpen: true));
     }
 
     // STDERR
@@ -78,11 +87,11 @@ public class ExternalCommand
     {
       FileMode mode = command.OutputType == OutputType.Append ? FileMode.Append : FileMode.Create;
       var fileStream = new FileStream(command.SterrTarget, mode, FileAccess.Write, FileShare.Read);
-      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, fileStream, leaveDestinationOpen: false));
+      RegisterOutputTask(shellInput, command, CopyStreamAsync(stderrSource, fileStream, leaveDestinationOpen: false));
     }
     else
     {
-      shellInput.OutputTasks.Add(CopyStreamAsync(stderrSource, Console.OpenStandardError(), leaveDestinationOpen: true));
+      RegisterOutputTask(shellInput, command, CopyStreamAsync(stderrSource, Console.OpenStandardError(), leaveDestinationOpen: true));
     }
 
     await Task.CompletedTask;
@@ -147,5 +156,13 @@ public class ExternalCommand
       await source.DisposeAsync();
       try { proc.StandardInput.Close(); } catch { }
     }
+  }
+
+  private static void RegisterOutputTask(ShellContext shellInput, Command command, Task task)
+  {
+    if (command.IsBackground)
+      shellInput.BackgroundOutputTasks.Add(task);
+    else
+      shellInput.OutputTasks.Add(task);
   }
 }

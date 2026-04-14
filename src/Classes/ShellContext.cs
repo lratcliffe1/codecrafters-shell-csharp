@@ -13,6 +13,9 @@ public class ShellContext
     public Stream? LastPipeReadStream { get; set; } = null;
     public List<Process> Processes { get; set; } = [];
     public List<Task> OutputTasks { get; set; } = [];
+    public List<Process> BackgroundProcesses { get; set; } = [];
+    public List<Task> BackgroundOutputTasks { get; set; } = [];
+    public int NextJobNumber { get; set; } = 1;
 
 }
 
@@ -23,6 +26,8 @@ public class Command
     public required string StdoutTarget { get; set; }
     public string? SterrTarget { get; set; }
     public required OutputType OutputType { get; set; }
+    public bool IsBackground { get; set; } = false;
+    public int? JobNumber { get; set; }
 }
 
 public enum OutputType

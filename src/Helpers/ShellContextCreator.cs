@@ -23,14 +23,29 @@ public static class ShellContextCreator
       History = previousShellContext.History.Append(input).ToList(),
       HistoryAppended = previousShellContext.HistoryAppended,
       HistoryLoaded = previousShellContext.HistoryLoaded,
+      BackgroundProcesses = previousShellContext.BackgroundProcesses,
+      BackgroundOutputTasks = previousShellContext.BackgroundOutputTasks,
+      NextJobNumber = previousShellContext.NextJobNumber,
     };
 
     for (var i = 0; i < formattedInputList.Count; i++)
     {
       List<string> formattedInput = formattedInputList[i];
+      bool isBackground = false;
+      int? jobNumber = null;
       string? sterrTarget = null;
       string stdoutTarget = "Console";
       OutputType outputType = OutputType.None;
+
+      if (i == formattedInputList.Count - 1 && formattedInput.Count > 0 && formattedInput.Last() == "&")
+      {
+        isBackground = true;
+        formattedInput = formattedInput[..^1];
+        jobNumber = shellContext.NextJobNumber++;
+      }
+
+      if (formattedInput.Count == 0)
+        continue;
 
       foreach (var (token, isError, type) in operators)
       {
@@ -55,10 +70,15 @@ public static class ShellContextCreator
         StdoutTarget = stdoutTarget,
         SterrTarget = sterrTarget,
         OutputType = outputType,
+        IsBackground = isBackground,
+        JobNumber = jobNumber,
       };
 
       shellContext.Commands.Add(newCommand);
     }
+
+    if (shellContext.Commands.Count == 0)
+      shellContext.RawInput = "";
 
     return shellContext;
   }
