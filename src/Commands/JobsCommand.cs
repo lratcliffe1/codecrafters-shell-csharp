@@ -7,25 +7,32 @@ public static class JobsCommand
   public static Stream Run(ShellContext shellContext, Command _) =>
       InternalCommand.CreateStream(async (writer) =>
       {
-        shellContext.BackgroundJobs.RemoveAll(job => job.Process.HasExited);
-
-        var runningJobs = shellContext.BackgroundJobs
-          .Where(job => !job.Process.HasExited)
+        var jobs = shellContext.BackgroundJobs
           .OrderBy(job => job.JobNumber)
           .ToList();
 
-        if (runningJobs.Count == 0)
+        if (jobs.Count == 0)
           return;
 
-        int currentJobNumber = runningJobs[^1].JobNumber;
-        int? previousJobNumber = runningJobs.Count > 1 ? runningJobs[^2].JobNumber : null;
+        int currentJobNumber = jobs[^1].JobNumber;
+        int? previousJobNumber = jobs.Count > 1 ? jobs[^2].JobNumber : null;
 
-        foreach (var job in runningJobs)
+        foreach (var job in jobs)
         {
+          bool isDone = job.Process.HasExited;
           string marker =
             job.JobNumber == currentJobNumber ? "+" :
             job.JobNumber == previousJobNumber ? "-" : " ";
-          await writer.WriteLineAsync($"[{job.JobNumber}]{marker}  {job.Status,-24}{job.CommandText}");
+          string status = isDone ? "Done" : "Running";
+          string commandText = isDone ? TrimBackgroundSuffix(job.CommandText) : job.CommandText;
+          await writer.WriteLineAsync($"[{job.JobNumber}]{marker}  {status,-24}{commandText}");
         }
+
+        shellContext.BackgroundJobs.RemoveAll(job => job.Process.HasExited);
       });
+
+  private static string TrimBackgroundSuffix(string commandText)
+  {
+    return commandText.EndsWith(" &") ? commandText[..^2] : commandText;
+  }
 }
