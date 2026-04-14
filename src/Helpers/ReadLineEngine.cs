@@ -7,12 +7,14 @@ public sealed class ReadLineEngine
   private readonly AutoCompletionEngine _autocomplete;
   private readonly List<string> _history = [];
   private int _historyIndex;
+  private readonly bool _isInputRedirected;
 
   public ReadLineEngine(AutoCompletionEngine autocomplete, List<string> history)
   {
     _history = history;
     _autocomplete = autocomplete;
     _historyIndex = 0;
+    _isInputRedirected = Console.IsInputRedirected;
   }
 
   public string ReadLine(string prompt)
@@ -32,14 +34,16 @@ public sealed class ReadLineEngine
       {
         case KeyKind.Char:
           buffer.Append(key.Char);
-          EchoText(key.Char.ToString());
+          if (_isInputRedirected)
+            EchoText(key.Char.ToString());
           break;
 
         case KeyKind.Backspace:
           if (buffer.Length > 0)
           {
             buffer.Remove(buffer.Length - 1, 1);
-            EchoText("\b \b");
+            if (_isInputRedirected)
+              EchoText("\b \b");
           }
           break;
 
@@ -49,8 +53,12 @@ public sealed class ReadLineEngine
             if (!string.IsNullOrEmpty(completion))
             {
               buffer.Append(completion);
-              EchoText(completion);
+              if (_isInputRedirected)
+                EchoText(completion);
             }
+
+            if (!_isInputRedirected)
+              Redraw(prompt, buffer.ToString());
             break;
           }
 
@@ -75,7 +83,8 @@ public sealed class ReadLineEngine
         case KeyKind.Enter:
           {
             var line = buffer.ToString();
-            Console.WriteLine();
+            if (_isInputRedirected)
+              Console.WriteLine();
 
             if (!string.IsNullOrWhiteSpace(line))
               _history.Add(line);
@@ -157,7 +166,7 @@ public static class KeyReader
   {
     if (!Console.IsInputRedirected)
     {
-      var k = Console.ReadKey(intercept: true);
+      var k = Console.ReadKey(intercept: false);
       return k.Key switch
       {
         ConsoleKey.Enter => new KeyPress(KeyKind.Enter),
