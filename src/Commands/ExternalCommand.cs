@@ -8,12 +8,20 @@ public class ExternalCommand
 {
   public static async Task Run(ShellContext shellInput, Command command)
   {
+    bool isLastCommand = ReferenceEquals(command, shellInput.Commands[^1]);
+    bool inheritsTerminalOutput =
+      command.IsBackground
+      && isLastCommand
+      && shellInput.LastPipeReadStream == null
+      && command.StdoutTarget == "Console"
+      && (command.SterrTarget == null || command.SterrTarget == "Console");
+
     var proc = new Process();
     proc.StartInfo = new ProcessStartInfo(command.Name)
     {
-      RedirectStandardInput = true,
-      RedirectStandardOutput = true,
-      RedirectStandardError = true,
+      RedirectStandardInput = !inheritsTerminalOutput,
+      RedirectStandardOutput = !inheritsTerminalOutput,
+      RedirectStandardError = !inheritsTerminalOutput,
       UseShellExecute = false
     };
 
@@ -41,7 +49,8 @@ public class ExternalCommand
         shellInput.LastPipeReadStream = null;
       }
 
-      await ApplyRedirection(shellInput, command, proc.StandardOutput.BaseStream, proc.StandardError.BaseStream);
+      if (!inheritsTerminalOutput)
+        await ApplyRedirection(shellInput, command, proc.StandardOutput.BaseStream, proc.StandardError.BaseStream);
     }
     catch (System.ComponentModel.Win32Exception)
     {
