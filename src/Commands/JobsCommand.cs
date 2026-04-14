@@ -1,4 +1,5 @@
 using src.Classes;
+using src.Helpers;
 
 namespace src.Commands;
 
@@ -10,29 +11,19 @@ public static class JobsCommand
         var jobs = shellContext.BackgroundJobs
           .OrderBy(job => job.JobNumber)
           .ToList();
-
         if (jobs.Count == 0)
           return;
 
-        var completedJobs = new List<BackgroundJob>();
-
         foreach (var job in jobs)
         {
-          bool isDone = job.Process.HasExited;
           string marker = GetMarker(job.JobNumber, jobs);
+          bool isDone = job.Process.HasExited;
           string status = isDone ? "Done" : "Running";
           string commandText = isDone ? TrimBackgroundSuffix(job.CommandText) : job.CommandText;
           await writer.WriteLineAsync($"[{job.JobNumber}]{marker}  {status,-24}{commandText}");
-
-          if (isDone)
-            completedJobs.Add(job);
         }
 
-        foreach (var completedJob in completedJobs)
-        {
-          completedJob.Process.Dispose();
-          shellContext.BackgroundJobs.Remove(completedJob);
-        }
+        JobReaper.RemoveCompletedJobs(shellContext);
       });
 
   private static string GetMarker(int jobNumber, List<BackgroundJob> jobs)

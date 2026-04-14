@@ -24,6 +24,7 @@ class Program
 
     while (true)
     {
+      await JobReaper.ReapCompletedJobs(shellContext, Console.Out.WriteLineAsync);
       string input = GetCommandFromUser(readline);
 
       if (input == "")
