@@ -15,6 +15,7 @@ public class ShellContext
     public List<Task> OutputTasks { get; set; } = [];
     public List<Process> BackgroundProcesses { get; set; } = [];
     public List<Task> BackgroundOutputTasks { get; set; } = [];
+    public List<BackgroundJob> BackgroundJobs { get; set; } = [];
     public int NextJobNumber { get; set; } = 1;
 
 }
@@ -28,6 +29,16 @@ public class Command
     public required OutputType OutputType { get; set; }
     public bool IsBackground { get; set; } = false;
     public int? JobNumber { get; set; }
+    public string? OriginalCommandText { get; set; }
+}
+
+public class BackgroundJob
+{
+    public required int JobNumber { get; set; }
+    public required int ProcessId { get; set; }
+    public required string CommandText { get; set; }
+    public required string Status { get; set; }
+    public required Process Process { get; set; }
 }
 
 public enum OutputType

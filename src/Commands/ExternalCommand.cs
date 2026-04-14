@@ -35,6 +35,18 @@ public class ExternalCommand
       {
         shellInput.BackgroundProcesses.Add(proc);
         if (command.JobNumber != null)
+        {
+          shellInput.BackgroundJobs.Add(new BackgroundJob
+          {
+            JobNumber = command.JobNumber.Value,
+            ProcessId = proc.Id,
+            CommandText = command.OriginalCommandText ?? $"{command.Name} {string.Join(" ", command.Args)} &".Trim(),
+            Status = "Running",
+            Process = proc
+          });
+        }
+
+        if (command.JobNumber != null)
           Console.WriteLine($"[{command.JobNumber}] {proc.Id}");
       }
       else

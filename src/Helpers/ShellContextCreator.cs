@@ -25,6 +25,7 @@ public static class ShellContextCreator
       HistoryLoaded = previousShellContext.HistoryLoaded,
       BackgroundProcesses = previousShellContext.BackgroundProcesses,
       BackgroundOutputTasks = previousShellContext.BackgroundOutputTasks,
+      BackgroundJobs = previousShellContext.BackgroundJobs,
       NextJobNumber = previousShellContext.NextJobNumber,
     };
 
@@ -72,6 +73,7 @@ public static class ShellContextCreator
         OutputType = outputType,
         IsBackground = isBackground,
         JobNumber = jobNumber,
+        OriginalCommandText = isBackground ? $"{string.Join(" ", formattedInput)} &" : null,
       };
 
       shellContext.Commands.Add(newCommand);

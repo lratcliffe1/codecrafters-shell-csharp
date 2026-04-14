@@ -63,7 +63,7 @@ class Program
             internalSource = HistoryCommand.Run(shellContext, command);
             break;
           case "jobs":
-            internalSource = JobsCommand.Run(command);
+            internalSource = JobsCommand.Run(shellContext, command);
             break;
           default:
             await ExternalCommand.Run(shellContext, command);
