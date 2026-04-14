@@ -46,15 +46,12 @@ public class ExternalCommand
       proc.Start();
       if (command.IsBackground)
       {
-        shellInput.BackgroundProcesses.Add(proc);
         if (command.JobNumber != null)
         {
           shellInput.BackgroundJobs.Add(new BackgroundJob
           {
             JobNumber = command.JobNumber.Value,
-            ProcessId = proc.Id,
             CommandText = command.OriginalCommandText ?? $"{command.Name} {string.Join(" ", command.Args)} &".Trim(),
-            Status = "Running",
             Process = proc
           });
         }
@@ -183,7 +180,7 @@ public class ExternalCommand
   private static void RegisterOutputTask(ShellContext shellInput, Command command, Task task)
   {
     if (command.IsBackground)
-      shellInput.BackgroundOutputTasks.Add(task);
+      _ = task;
     else
       shellInput.OutputTasks.Add(task);
   }

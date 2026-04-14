@@ -23,8 +23,6 @@ public static class ShellContextCreator
       History = previousShellContext.History.Append(input).ToList(),
       HistoryAppended = previousShellContext.HistoryAppended,
       HistoryLoaded = previousShellContext.HistoryLoaded,
-      BackgroundProcesses = previousShellContext.BackgroundProcesses,
-      BackgroundOutputTasks = previousShellContext.BackgroundOutputTasks,
       BackgroundJobs = previousShellContext.BackgroundJobs,
       NextJobNumber = previousShellContext.NextJobNumber,
     };
