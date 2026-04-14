@@ -32,14 +32,14 @@ public sealed class ReadLineEngine
       {
         case KeyKind.Char:
           buffer.Append(key.Char);
-          Redraw(prompt, buffer.ToString());
+          EchoText(key.Char.ToString());
           break;
 
         case KeyKind.Backspace:
           if (buffer.Length > 0)
           {
             buffer.Remove(buffer.Length - 1, 1);
-            Redraw(prompt, buffer.ToString());
+            EchoText("\b \b");
           }
           break;
 
@@ -49,7 +49,7 @@ public sealed class ReadLineEngine
             if (!string.IsNullOrEmpty(completion))
             {
               buffer.Append(completion);
-              Redraw(prompt, buffer.ToString());
+              EchoText(completion);
             }
             break;
           }
@@ -74,8 +74,8 @@ public sealed class ReadLineEngine
 
         case KeyKind.Enter:
           {
-            Console.WriteLine();
             var line = buffer.ToString();
+            Console.WriteLine();
 
             if (!string.IsNullOrWhiteSpace(line))
               _history.Add(line);
@@ -118,6 +118,12 @@ public sealed class ReadLineEngine
 
     _historyIndex++;
     return _history[_historyIndex];
+  }
+
+  private static void EchoText(string text)
+  {
+    Console.Write(text);
+    Console.Out.Flush();
   }
 
   private static void Redraw(string prompt, string buffer)

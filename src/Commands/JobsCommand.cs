@@ -18,10 +18,13 @@ public static class JobsCommand
           return;
 
         int currentJobNumber = runningJobs[^1].JobNumber;
+        int? previousJobNumber = runningJobs.Count > 1 ? runningJobs[^2].JobNumber : null;
 
         foreach (var job in runningJobs)
         {
-          string marker = job.JobNumber == currentJobNumber ? "+" : "-";
+          string marker =
+            job.JobNumber == currentJobNumber ? "+" :
+            job.JobNumber == previousJobNumber ? "-" : " ";
           await writer.WriteLineAsync($"[{job.JobNumber}]{marker}  {job.Status,-24}{job.CommandText}");
         }
       });

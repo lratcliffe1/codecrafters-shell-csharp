@@ -11,14 +11,13 @@ public static class InternalCommand
 
     _ = Task.Run(async () =>
     {
-      AnonymousPipeClientStream? pipeClient = null;
-      StreamWriter? writer = null;
-
       try
       {
-        pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
-        writer = new StreamWriter(pipeClient);
-        writer.AutoFlush = true;
+        await using var pipeClient = new AnonymousPipeClientStream(PipeDirection.Out, clientHandle);
+        await using var writer = new StreamWriter(pipeClient)
+        {
+          AutoFlush = true
+        };
 
         await logic(writer);
         await writer.FlushAsync();
@@ -29,12 +28,6 @@ public static class InternalCommand
       }
       finally
       {
-        if (writer != null)
-          await writer.DisposeAsync();
-
-        if (pipeClient != null)
-          await pipeClient.DisposeAsync();
-
         pipeServer.DisposeLocalCopyOfClientHandle();
       }
     });

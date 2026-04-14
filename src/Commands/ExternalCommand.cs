@@ -128,7 +128,7 @@ public class ExternalCommand
       if (destination is AnonymousPipeServerStream pipeServer && OperatingSystem.IsWindows())
         pipeServer.WaitForPipeDrain();
     }
-    catch (IOException)
+    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is UnauthorizedAccessException)
     {
       // Broken pipe is normal for commands like `head`
     }
@@ -168,7 +168,7 @@ public class ExternalCommand
 
       await proc.StandardInput.FlushAsync();
     }
-    catch (IOException)
+    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is UnauthorizedAccessException)
     {
       // Consumer may exit early
     }
