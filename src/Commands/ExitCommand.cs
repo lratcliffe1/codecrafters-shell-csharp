@@ -16,10 +16,9 @@ public static class ExitCommand
 
   private static void SaveHistory(ShellContext shellContext)
   {
-    string historyFilePath = Environment.GetEnvironmentVariable("HISTFILE")
-      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
+    string? historyFilePath = Environment.GetEnvironmentVariable("HISTFILE");
 
-    if (string.IsNullOrEmpty(historyFilePath))
+    if (string.IsNullOrWhiteSpace(historyFilePath))
       return;
 
     var newHistoryItems = shellContext.History.Skip(shellContext.HistoryLoaded);

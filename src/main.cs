@@ -36,6 +36,16 @@ class Program
       if (shellContext.RawInput == "")
         continue;
 
+      bool hasPipeline = shellContext.Commands.Count > 1;
+      bool allExternalPipelineCommands = hasPipeline && shellContext.Commands.All(command => !CommandConstants.All.Contains(command.Name));
+      bool hasBackgroundCommand = shellContext.Commands.Any(command => command.IsBackground);
+
+      if (allExternalPipelineCommands && !hasBackgroundCommand)
+      {
+        await ExternalCommand.RunRawPipeline(input);
+        continue;
+      }
+
       bool exit = false;
 
       foreach (var command in shellContext.Commands)
@@ -99,8 +109,10 @@ class Program
 
   static List<string> LoadHistoryFromHistFile()
   {
-    string historyFilePath = Environment.GetEnvironmentVariable("HISTFILE")
-      ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".bash_history");
+    string? historyFilePath = Environment.GetEnvironmentVariable("HISTFILE");
+
+    if (string.IsNullOrWhiteSpace(historyFilePath))
+      return [];
 
     if (!File.Exists(historyFilePath))
       return [];
@@ -118,11 +130,6 @@ class Program
 
   private static async Task OutputResult(ShellContext shellContext)
   {
-    foreach (var proc in shellContext.Processes)
-    {
-      await proc.WaitForExitAsync();
-    }
-
     await Task.Yield();
 
     if (shellContext.LastPipeReadStream != null)

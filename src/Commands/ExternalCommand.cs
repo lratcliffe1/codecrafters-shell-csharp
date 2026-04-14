@@ -6,20 +6,33 @@ namespace src.Commands;
 
 public class ExternalCommand
 {
+  public static async Task RunRawPipeline(string rawInput)
+  {
+    var proc = new Process();
+    proc.StartInfo = new ProcessStartInfo("/bin/sh")
+    {
+      UseShellExecute = false
+    };
+    proc.StartInfo.ArgumentList.Add("-c");
+    proc.StartInfo.ArgumentList.Add(rawInput);
+
+    proc.Start();
+    await proc.WaitForExitAsync();
+  }
+
   public static async Task Run(ShellContext shellInput, Command command)
   {
     bool isLastCommand = ReferenceEquals(command, shellInput.Commands[^1]);
+    bool hasPipelineInput = shellInput.LastPipeReadStream != null;
     bool inheritsTerminalOutput =
-      command.IsBackground
-      && isLastCommand
-      && shellInput.LastPipeReadStream == null
+      isLastCommand
       && command.StdoutTarget == "Console"
       && (command.SterrTarget == null || command.SterrTarget == "Console");
 
     var proc = new Process();
     proc.StartInfo = new ProcessStartInfo(command.Name)
     {
-      RedirectStandardInput = !inheritsTerminalOutput,
+      RedirectStandardInput = hasPipelineInput,
       RedirectStandardOutput = !inheritsTerminalOutput,
       RedirectStandardError = !inheritsTerminalOutput,
       UseShellExecute = false
@@ -55,7 +68,7 @@ public class ExternalCommand
       }
 
       // If we have a pipeline read-stream from the previous command, feed it into stdin.
-      if (shellInput.LastPipeReadStream != null)
+      if (hasPipelineInput && shellInput.LastPipeReadStream != null)
       {
         RegisterOutputTask(shellInput, command, PumpToProcessStdinAsync(shellInput.LastPipeReadStream, proc));
         shellInput.LastPipeReadStream = null;
@@ -122,13 +135,13 @@ public class ExternalCommand
   {
     try
     {
-      await source.CopyToAsync(destination);
-      await destination.FlushAsync();
+      source.CopyTo(destination);
+      destination.Flush();
 
       if (destination is AnonymousPipeServerStream pipeServer && OperatingSystem.IsWindows())
         pipeServer.WaitForPipeDrain();
     }
-    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is UnauthorizedAccessException)
+    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException)
     {
       // Broken pipe is normal for commands like `head`
     }
@@ -150,25 +163,13 @@ public class ExternalCommand
   {
     try
     {
-      var buffer = new byte[8192];
-      long totalBytes = 0;
-
-      while (true)
-      {
-        int read = await source.ReadAsync(buffer);
-        if (read == 0)
-        {
-          break;
-        }
-
-        totalBytes += read;
-
-        await proc.StandardInput.BaseStream.WriteAsync(buffer.AsMemory(0, read));
-      }
-
-      await proc.StandardInput.FlushAsync();
+      using var reader = new StreamReader(source, leaveOpen: true);
+      proc.StandardInput.AutoFlush = true;
+      string? line;
+      while ((line = await reader.ReadLineAsync()) != null)
+        await proc.StandardInput.WriteLineAsync(line);
     }
-    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException || ex is UnauthorizedAccessException)
+    catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException)
     {
       // Consumer may exit early
     }
